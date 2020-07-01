@@ -85,7 +85,6 @@ if __name__ == "__main__":
         model_name = 'bert-base-uncased'
         print('Model used:', model_name)
         #config = BertConfig.from_pretrained(model_name)
-
         tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=True)
 
         # SQuAD
