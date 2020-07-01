@@ -455,7 +455,6 @@ def train_ED_question_generation(model,
                     save_model_dir = os.path.join(output_dir, 'checkpoint-{}'.format(global_step))
                     os.makedirs(save_model_dir)
                     model.save_pretrained(save_model_dir)
-                    # torch.save(args, os.path.join(output_dir, 'training_args.bin'))
                     print("Saving model checkpoint to %s" % save_model_dir)
 
                     if logging_dir is not None:
@@ -465,16 +464,6 @@ def train_ED_question_generation(model,
 
         end_epoch = time.time()
         print(f'Epoch {epoch + 1}/{num_train_epochs}, time = {end_epoch - start_epoch} secs')
-
-        # result_train = evaluate(model=model,
-        #                        eval_dataset=train_dataset,
-        #                        tokenizer=tokenizer,
-        #                        eval_batch_size=train_batch_size,
-        #                        num_to_evaluate=1000,
-        #                        verbose=1)
-        # train_loss_history.append(result_train['val_loss'])
-        # print("Train loss:", result_train['val_loss'])
-
     end_train = time.time()
     print("Train took:", end_train - start_train)
 
