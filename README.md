@@ -2,6 +2,8 @@
 
 ## Question Generation with BERT on SQuAD and FQuAD
 
+**Zelros A.I.** [](https://github.com/joachim-dublineau/Project_generation/blob/master/logo.jpg?raw=true)
+
 This repository contains some functions and a script able to train an EncoderDecoderModel from Hugging Face's transformers library (https://github.com/huggingface/transformers).
 
 It works with BERT and CamemBERT and it uses SQuAD (https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v2.0.json
