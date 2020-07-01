@@ -613,7 +613,6 @@ def generate_questions(model,
     """
     sampler = SequentialSampler(dataset)
     dataloader = DataLoader(dataset, sampler=sampler, batch_size=batch_size)
-
     iterator = dataloader
     results_generation = []
     for batch in iterator:
@@ -635,6 +634,7 @@ def generate_questions(model,
                       'eos_token_id': tokenizer.eos_token_id,
                       }
             outputs = model.generate(**inputs)
+
         for output in outputs:
             results.append(tokenizer.decode(output.squeeze(0),
                                             skip_special_tokens=True,
@@ -642,11 +642,12 @@ def generate_questions(model,
                            )
         labels = []
         for label in batch[5]:
+            label[label == -100] = tokenizer.pad_token_id
             labels.append(tokenizer.decode(label.squeeze(0),
                                            skip_special_tokens=True,
-                                           ))
+                                           )
+                          )
         results_generation.append((results, labels))
-
     return results_generation
 
 # UTILS FOR DATA LOADING

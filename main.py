@@ -142,12 +142,12 @@ if __name__ == "__main__":
     print("Done. {:.4f}s".format(time.time() - t0))
 
     # TRAINING
-    #print('input_ids:', train_dataset[0][0].tolist())
-    #print('\nattention_mask:', train_dataset[0][1])
-    #print('\ntoken_type_ids:', train_dataset[0][2])
-    #print('\ndecoder_input_ids:', train_dataset[0][3].tolist())
-    #print('\ndecoder_attention_mask:', train_dataset[0][4])
-    #print('\nlabels:', train_dataset[0][5].tolist())  # unknown token is due to -100
+    #print('input_ids:', generation_dataset[0][0].tolist())
+    #print('\nattention_mask:', generation_dataset[0][1])
+    #print('\ntoken_type_ids:', generation_dataset[0][2])
+    #print('\ndecoder_input_ids:', generation_dataset[0][3].tolist())
+    #print('\ndecoder_attention_mask:', generation_dataset[0][4])
+    #print('\nlabels:', generation_dataset[0][5].tolist())  # unknown token is due to -100
 
     train_ED_question_generation(model=model,
                                  train_dataset=train_dataset,
@@ -158,7 +158,7 @@ if __name__ == "__main__":
                                  learning_rate=args.learning_rate,
                                  device=device,
                                  adam_epsilon=1e-8,
-                                 logging_steps=10,  #
+                                 logging_steps=50,
                                  logging_dir=args.output_dir,
                                  gradient_accumulation_steps=args.gradient_accumulation_steps,
                                  max_grad_norm=1.0,
