@@ -29,8 +29,10 @@ from transformers import (BertConfig,
                           BartForConditionalGeneration,
                           )
 
-from transformers_utils import (load_json_FQuAD,
-                                load_json_SQuAD,
+from sklearn.model_selection import train_test_split
+
+from transformers_utils import (load_json_QuAD_v1,
+                                load_json_QuAD_v2,
                                 load_examples_question_generation,
                                 train_question_generation,
                                 )
@@ -55,6 +57,7 @@ parser.add_argument("-ss", "--save_steps", help="number of gradient descent step
 parser.add_argument("-ep", "--epochs", help="number of epochs for training", type=int, default=10, action='store')
 parser.add_argument("-gs", "--gradient_accumulation_steps", help='number of steps before backward step', type=int, default=50, action='store')
 parser.add_argument("-wd", "--weight_decay", help="weight decay parameter for training", type=float, default=1e-5, action='store')
+parser.add_argument("-fb", "--file_bis", help="option to add name of piaf file (for fr model)", default="", action="store")
 
 
 args = parser.parse_args()
@@ -88,8 +91,22 @@ if __name__ == "__main__":
             tokenizer = CamembertTokenizer.from_pretrained(model_name, do_lower_case=True)
         print("Model used:", model_name)
         # FQuAD
-        df_train = load_json_FQuAD(args.file_train)
-        df_valid = load_json_FQuAD(args.file_test)
+        try:
+            df_train = load_json_QuAD_v1(args.file_train)
+            df_valid = load_json_QuAD_v1(args.file_test)
+        except:
+            df_train = load_json_QuAD_v2(args.file_train)
+            df_valid = load_json_QuAD_v2(args.file_test)
+            pass
+
+
+        if args.file_bis != "":
+            piaf_df_train, piaf_df_valid = train_test_split(
+                load_json_QuAD_v1(args.file_bis), test_size=0.1)
+            df_train = pd.concat([df_train, piaf_df_train])
+            df_train = df_train.reset_index(drop=True)
+            df_valid = pd.concat([df_valid, piaf_df_valid])
+            df_valid = df_valid.reset_index(drop=True)
 
     else:
         if args.bart:
@@ -104,8 +121,13 @@ if __name__ == "__main__":
             tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=True)
         print('Model used:', model_name)
         # SQuAD
-        df_train = load_json_SQuAD(args.file_train)
-        df_valid = load_json_SQuAD(args.file_test)
+        try:
+            df_train = load_json_QuAD_v1(args.file_train)
+            df_valid = load_json_QuAD_v1(args.file_test)
+        except:
+            df_train = load_json_QuAD_v2(args.file_train)
+            df_valid = load_json_QuAD_v2(args.file_test)
+            pass
 
     if not model_created:
         model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_name, model_name)

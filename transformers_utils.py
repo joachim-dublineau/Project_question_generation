@@ -201,7 +201,7 @@ def load_examples_question_generation(answers,
     - answers: list of strings, containing the answers to the question.
     - sentences: list of strings, containing the context to answer the question.
     - labels: list of strings, containing the text of the questions.
-    - tokenizer: torch toenizer object, tokenizer used for analysis.
+    - tokenizer: torch tokenizer object, tokenizer used for analysis.
     - max_seq_length: int, max length of the input sequence.
     - max_length_label: int, max length of the output question.
     - bart: boolean, saying whether the model we prepare the data for is BART or not.
@@ -614,7 +614,7 @@ def generate_questions(model,
     - batch_size: int, size of mini-batch.
     - min_length: int, min length of generated question.
     - max_length: int, max length of generated question.
-    - repetion_penalty: float, between 1 and infinity (max penalty).
+    - repetition_penalty: float, between 1 and infinity (max penalty).
     - length_penalty: float, between 1 and infinity (max penalty).
     OUTPUTS:
     - results: list of string, predictions.
@@ -660,7 +660,7 @@ def generate_questions(model,
 
 # UTILS FOR DATA LOADING
 
-def load_json_SQuAD(file_name):
+def load_json_QuAD_v2(file_name):
     questions_list = []
     id_question_list = []
     answer_span_list = []
@@ -695,7 +695,7 @@ def load_json_SQuAD(file_name):
     return df_
 
 
-def load_json_FQuAD(file_name):
+def load_json_QuAD_v1(file_name):
     questions_list = []
     id_question_list = []
     answer_span_list = []
