@@ -1,6 +1,6 @@
 # Project_generation
 
-## Question Generation with BERT on SQuAD and FQuAD
+## Question Generation with Transformers on SQuAD and FQuAD
 
 **Zelros A.I.** [](logo.jpg)
 
