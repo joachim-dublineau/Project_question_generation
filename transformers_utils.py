@@ -22,6 +22,8 @@ random.seed(2020)
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 
+from transformers.modeling_bart import shift_tokens_right
+
 from transformers import (AdamW,
                           get_linear_schedule_with_warmup,
                           get_cosine_with_hard_restarts_schedule_with_warmup)
@@ -82,11 +84,12 @@ class DataProcessor():
         return examples
 
 
-def convert_examples_to_features_question_generation_ED(examples,
-                                                        tokenizer,
-                                                        max_length=512,
-                                                        max_length_label=32,
-                                                        ):
+def convert_examples_to_features_question_generation(examples,
+                                                     tokenizer,
+                                                     max_length=512,
+                                                     max_length_label=32,
+                                                     bart=False,
+                                                     ):
     """
     This function converts a list of examples into features that can be used
     as inputs for the question generation model.
@@ -95,6 +98,7 @@ def convert_examples_to_features_question_generation_ED(examples,
     - tokenizer: torch tokenizer object, tokenize the examples.
     - max_length: int, size of the maximum input sentence (list of tokens).
     - max_length_label: int, size of the maximum label sentence.
+    - bart: boolean, saying whether the model is BART or not.
     OUTPUTS:
     - features: list of object <class: InputFeatures>, list of features for model.
     """
@@ -127,25 +131,37 @@ def convert_examples_to_features_question_generation_ED(examples,
         assert len(input_ids) == max_length, "Error with input length {} vs {}".format(len(input_ids), max_length)
         assert len(attention_mask) == max_length, "Error with input length {} vs {}".format(len(attention_mask),
                                                                                             max_length)
+        assert len(token_type_ids) == max_length, "Error with input length {} vs {}".format(len(token_type_ids),
+                                                                                            max_length)
+
 
         ######## ENCODING LABEL ########
         if example.question is not None:
+            if bart:
+                label = tokenizer.encode_plus(example.question,
+                                              max_length=max_length_label,
+                                              truncation=True,
+                                              )
+                label_ids = label["input_ids"]
+                padding_length = max_length_label - len(label_ids)
+                label_ids = label_ids + [-100] * padding_length
+                decoder_input_ids = shift_tokens_right(torch.tensor(label_ids).unsqueeze(0), -100).squeeze(0).tolist()
+                decoder_input_ids = [x if x != -100 else pad_token for x in decoder_input_ids]
+            else:
+                label_ids = tokenizer.encode(example.question,
+                                             add_special_tokens=True,
+                                             max_length=max_length_label,
+                                             truncation=True,
+                                             )
 
-            label_ids = tokenizer.encode(example.question,
-                                         add_special_tokens=True,
-                                         max_length=max_length_label,
-                                         truncation=True,
-                                         )
-
-            decoder_input_ids = label_ids
+                decoder_input_ids = label_ids
+                padding_length = max_length_label - len(label_ids)
+                label_ids = label_ids + [-100] * padding_length
+                decoder_input_ids = decoder_input_ids + [pad_token] * padding_length
 
             decoder_attention_mask = [1] * max_length_label
-            padding_length = max_length_label - len(label_ids)
-            label_ids = label_ids + [-100] * padding_length
-            decoder_input_ids = decoder_input_ids + [pad_token] * padding_length
 
-            assert len(label_ids) == max_length_label, "Error with input length {} vs {}".format(len(input_ids),
-                                                                                                 max_length)
+            assert len(label_ids) == max_length_label, "Error with input length {} vs {}".format(len(input_ids), max_length)
             assert len(decoder_input_ids) == max_length_label, "Error with input length {} vs {}".format(
                 len(decoder_input_ids), max_length_label)
             assert len(decoder_attention_mask) == max_length_label, "Error with input length {} vs {}".format(
@@ -171,13 +187,14 @@ def convert_examples_to_features_question_generation_ED(examples,
     return features
 
 
-def load_examples_question_generation_ED(answers,
-                                         sentences,
-                                         tokenizer,
-                                         max_length_seq,
-                                         max_length_label,
-                                         labels=None,
-                                         ):
+def load_examples_question_generation(answers,
+                                      sentences,
+                                      tokenizer,
+                                      max_length_seq,
+                                      max_length_label,
+                                      labels=None,
+                                      bart=False,
+                                      ):
     """
     This function will creates features from set of answers, sentences and labels.
     INPUTS:
@@ -187,6 +204,7 @@ def load_examples_question_generation_ED(answers,
     - tokenizer: torch toenizer object, tokenizer used for analysis.
     - max_seq_length: int, max length of the input sequence.
     - max_length_label: int, max length of the output question.
+    - bart: boolean, saying whether the model we prepare the data for is BART or not.
     OUTPUTS:
     - dataset: torch TensorDataset, dataset containing input_ids, att_masks,
     token_type_ids, labels.
@@ -194,11 +212,12 @@ def load_examples_question_generation_ED(answers,
     processor = DataProcessor()
     examples = processor.get_data_examples(answers, sentences, labels)
 
-    features = convert_examples_to_features_question_generation_ED(examples,
-                                                                   tokenizer,
-                                                                   max_length=max_length_seq,
-                                                                   max_length_label=max_length_label,
-                                                                   )
+    features = convert_examples_to_features_question_generation(examples,
+                                                                tokenizer,
+                                                                max_length=max_length_seq,
+                                                                max_length_label=max_length_label,
+                                                                bart=bart,
+                                                                )
 
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
     all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
@@ -225,34 +244,34 @@ def load_examples_question_generation_ED(answers,
 
 # UTILS FOR TRAINING
 
-def train_ED_question_generation(model,
-                                 train_dataset,
-                                 tokenizer,
-                                 num_train_epochs,
-                                 train_batch_size,
-                                 max_length_label,
-                                 learning_rate,
-                                 device,
-                                 adam_epsilon=1e-8,
-                                 logging_steps=None,
-                                 logging_dir=None,
-                                 gradient_accumulation_steps=1,
-                                 max_grad_norm=1.0,
-                                 weight_decay=0.0,
-                                 warmup_steps=0,
-                                 output_dir=None,
-                                 max_steps=-1,
-                                 num_cycles=1.0,
-                                 evaluate_during_training=False,
-                                 eval_dataset=None,
-                                 eval_batch_size=8,
-                                 generation_during_training=False,
-                                 generation_dataset=None,
-                                 save_steps=-1,
-                                 verbose=0,
-                                 ):
+def train_question_generation(model,
+                              train_dataset,
+                              tokenizer,
+                              num_train_epochs,
+                              train_batch_size,
+                              max_length_label,
+                              learning_rate,
+                              device,
+                              adam_epsilon=1e-8,
+                              logging_steps=None,
+                              logging_dir=None,
+                              gradient_accumulation_steps=1,
+                              max_grad_norm=1.0,
+                              weight_decay=0.0,
+                              warmup_steps=0,
+                              output_dir=None,
+                              max_steps=-1,
+                              num_cycles=1.0,
+                              evaluate_during_training=False,
+                              eval_dataset=None,
+                              eval_batch_size=8,
+                              generation_during_training=False,
+                              generation_dataset=None,
+                              save_steps=-1,
+                              verbose=0,
+                               ):
     """
-    This funcion trains Encoder Decoder model on the train_dataset, eval_dataset being
+    This function trains models on the train_dataset, eval_dataset being
     optional.
     INPUTS:
     - model: Torch model, model to train.
@@ -421,17 +440,17 @@ def train_ED_question_generation(model,
                         dict_print = {'step': global_step,
                                       'lr': scheduler.get_lr()[0],
                                       'tr_loss': (tr_loss - logging_loss) / logging_steps}
-                        result_eval = evaluate_ED(model=model,
-                                                  eval_dataset=eval_dataset,
-                                                  tokenizer=tokenizer,
-                                                  device=device,
-                                                  max_length_output=max_length_label,
-                                                  eval_batch_size=eval_batch_size,
-                                                  generation=generation_during_training,
-                                                  generation_dataset=generation_dataset,
-                                                  logging_dir=logging_dir,
-                                                  verbose=1,
-                                                  )
+                        result_eval = evaluate(model=model,
+                                               eval_dataset=eval_dataset,
+                                               tokenizer=tokenizer,
+                                               device=device,
+                                               max_length_output=max_length_label,
+                                               eval_batch_size=eval_batch_size,
+                                               generation=generation_during_training,
+                                               generation_dataset=generation_dataset,
+                                               logging_dir=logging_dir,
+                                               verbose=1,
+                                               )
                         for key, value in result_eval.items():
                             dict_print['eval_{}'.format(key)] = value
                         train_loss_history.append((tr_loss - logging_loss) / logging_steps)
@@ -470,19 +489,19 @@ def train_ED_question_generation(model,
     return train_loss_history, val_loss_history
 
 
-def evaluate_ED(model,
-                eval_dataset,
-                tokenizer,
-                device,
-                max_length_output=0,
-                eval_batch_size=8,
-                generation=False,
-                generation_dataset=None,
-                logging_dir=None,
-                verbose=1,
-                ):
+def evaluate(model,
+             eval_dataset,
+             tokenizer,
+             device,
+             max_length_output=0,
+             eval_batch_size=8,
+             generation=False,
+             generation_dataset=None,
+             logging_dir=None,
+             verbose=1,
+             ):
     """
-    This function evaluates the loss and accuracy of the EncoderDecoder Model
+    This function evaluates the loss and accuracy of the model
     on the evaluation set.
     INPUTS:
     - model: Torch Hugging Face model, model to train.

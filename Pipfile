@@ -9,7 +9,7 @@ verify_ssl = true
 pandas = "*"
 numpy = "*"
 torch = "*"
-transformers = "*"
+transformers = "==3.0.0"
 scikit-learn = "*"
 
 [requires]
