@@ -2,7 +2,7 @@
 
 ## Question Generation with Transformers on SQuAD and FQuAD
 
-**Zelros A.I.** [<logo>](logo.jpg)
+**Zelros A.I.** [Logo](logo.jpg)
 
 This repository contains some functions and a script able to train an EncoderDecoderModel or a BART model from Hugging Face's transformers library (https://github.com/huggingface/transformers).
 
