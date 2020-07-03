@@ -161,7 +161,8 @@ def convert_examples_to_features_question_generation(examples,
 
             decoder_attention_mask = [1] * max_length_label
 
-            assert len(label_ids) == max_length_label, "Error with input length {} vs {}".format(len(input_ids), max_length)
+            assert len(label_ids) == max_length_label, "Error with input length {} vs {}".format(len(input_ids),
+                                                                                                 max_length)
             assert len(decoder_input_ids) == max_length_label, "Error with input length {} vs {}".format(
                 len(decoder_input_ids), max_length_label)
             assert len(decoder_attention_mask) == max_length_label, "Error with input length {} vs {}".format(

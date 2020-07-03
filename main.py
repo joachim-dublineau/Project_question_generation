@@ -92,11 +92,11 @@ if __name__ == "__main__":
         print("Model used:", model_name)
         # FQuAD
         try:
-            df_train = load_json_QuAD_v1(args.file_train)
-            df_valid = load_json_QuAD_v1(args.file_test)
-        except:
             df_train = load_json_QuAD_v2(args.file_train)
             df_valid = load_json_QuAD_v2(args.file_test)
+        except:
+            df_train = load_json_QuAD_v1(args.file_train)
+            df_valid = load_json_QuAD_v1(args.file_test)
             pass
 
 
@@ -122,11 +122,11 @@ if __name__ == "__main__":
         print('Model used:', model_name)
         # SQuAD
         try:
-            df_train = load_json_QuAD_v1(args.file_train)
-            df_valid = load_json_QuAD_v1(args.file_test)
-        except:
             df_train = load_json_QuAD_v2(args.file_train)
             df_valid = load_json_QuAD_v2(args.file_test)
+        except:
+            df_train = load_json_QuAD_v1(args.file_train)
+            df_valid = load_json_QuAD_v1(args.file_test)
             pass
 
     if not model_created:
