@@ -2,7 +2,7 @@
 
 ######## Hugging Face Utils repository for transformers model training ########
 
-# This python file contains usefull functions that will be used to train transformers
+# This python file contains useful functions that will be used to train transformers
 # models like BERT and CamemBERT with EncoderDecoderModel. They might not work in another
 # framework.
 
@@ -270,7 +270,7 @@ def train_question_generation(model,
                               generation_dataset=None,
                               save_steps=-1,
                               verbose=0,
-                               ):
+                              ):
     """
     This function trains models on the train_dataset, eval_dataset being
     optional.
@@ -441,17 +441,17 @@ def train_question_generation(model,
                         dict_print = {'step': global_step,
                                       'lr': scheduler.get_lr()[0],
                                       'tr_loss': (tr_loss - logging_loss) / logging_steps}
-                        result_eval = evaluate(model=model,
-                                               eval_dataset=eval_dataset,
-                                               tokenizer=tokenizer,
-                                               device=device,
-                                               max_length_output=max_length_label,
-                                               eval_batch_size=eval_batch_size,
-                                               generation=generation_during_training,
-                                               generation_dataset=generation_dataset,
-                                               logging_dir=logging_dir,
-                                               verbose=1,
-                                               )
+                        result_eval = evaluate_question_generation(model=model,
+                                                                   eval_dataset=eval_dataset,
+                                                                   tokenizer=tokenizer,
+                                                                   device=device,
+                                                                   max_length_output=max_length_label,
+                                                                   eval_batch_size=eval_batch_size,
+                                                                   generation=generation_during_training,
+                                                                   generation_dataset=generation_dataset,
+                                                                   logging_dir=logging_dir,
+                                                                   verbose=1,
+                                                                   )
                         for key, value in result_eval.items():
                             dict_print['eval_{}'.format(key)] = value
                         train_loss_history.append((tr_loss - logging_loss) / logging_steps)
@@ -490,17 +490,17 @@ def train_question_generation(model,
     return train_loss_history, val_loss_history
 
 
-def evaluate(model,
-             eval_dataset,
-             tokenizer,
-             device,
-             max_length_output=0,
-             eval_batch_size=8,
-             generation=False,
-             generation_dataset=None,
-             logging_dir=None,
-             verbose=1,
-             ):
+def evaluate_question_generation(model,
+                                 eval_dataset,
+                                 tokenizer,
+                                 device,
+                                 max_length_output=0,
+                                 eval_batch_size=8,
+                                 generation=False,
+                                 generation_dataset=None,
+                                 logging_dir=None,
+                                 verbose=1,
+                                 ):
     """
     This function evaluates the loss and accuracy of the model
     on the evaluation set.
