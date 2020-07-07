@@ -28,7 +28,8 @@ positional arguments:
 optional arguments:
 
  - -h, --help            show this help message and exit
- - -bt,--bart BART true if bart else false
+ - -bt BART, --bart BART true if bart else false
+ - -ls LOGGING_STEPS,  --logging_steps LOGGING_STEPS number of backward steps between each evaluation
  - -ck CHECKPOINT, --checkpoint CHECKPOINT directory where to find last checkpoint
  - -lr LEARNING_RATE, --learning_rate LEARNING_RATE default learning rate
  - -bs BATCH_SIZE, --batch_size BATCH_SIZE batch size for training
