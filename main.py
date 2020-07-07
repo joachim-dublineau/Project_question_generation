@@ -50,6 +50,7 @@ parser.add_argument("output_dir", help="name of the directory for logs and check
 
 # Optional arguments
 parser.add_argument("-bt", "--bart", help="true if bart else false", action="store", type=bool, default=False)
+parser.add_argument("-ls", "--logging_steps", help="number of steps between each evaluation", action="store", default=50, type=int)
 parser.add_argument("-ck", "--checkpoint", help="directory where to find last checkpoint", action='store', default=None)
 parser.add_argument("-lr", "--learning_rate", help="default learning rate", type=float, default=1e-4, action='store')
 parser.add_argument("-bs", "--batch_size", help="batch size for training", type=int, default=16, action='store')
@@ -198,7 +199,7 @@ if __name__ == "__main__":
                               learning_rate=args.learning_rate,
                               device=device,
                               adam_epsilon=1e-8,
-                              logging_steps=50,
+                              logging_steps=args.logging_steps,
                               logging_dir=args.output_dir,
                               gradient_accumulation_steps=args.gradient_accumulation_steps,
                               max_grad_norm=1.0,
