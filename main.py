@@ -15,6 +15,7 @@ import pandas as pd
 import time
 import random
 random.seed(2020)
+import os
 
 import torch
 
@@ -76,16 +77,21 @@ if __name__ == "__main__":
 
     if args.checkpoint != None:
         model_created = True
-        config = EncoderDecoderConfig.from_json_file(args.checkpoint + "/config.json")
-        model = EncoderDecoderModel.from_pretrained(args.checkpoint + "/pytorch_model.bin", config=config)
+        if args.bart:
+            config = BartConfig.from_json_file(args.checkpoint + "/config.json")
+            model = BartForConditionalGeneration.from_pretrained(args.checkpoint + "/pytorch_model.bin", config=config)
+        else:
+            config = EncoderDecoderConfig.from_json_file(args.checkpoint + "/config.json")
+            model = EncoderDecoderModel.from_pretrained(args.checkpoint + "/pytorch_model.bin", config=config)
 
     if args.language == 'fr':
         if args.bart:
             model_name = "WikinewsSum/bart-large-multi-fr-wiki-news"
             #config = BartConfig.from_pretrained(model_name)
             tokenizer = BartTokenizer.from_pretrained(model_name, do_lower_case=True)
-            model = BartForConditionalGeneration.from_pretrained(model_name)
-            model_created = True
+            if not model_created:
+                model = BartForConditionalGeneration.from_pretrained(model_name)
+                model_created = True
         else:
             model_name = "camembert-base"
             #config = CamembertConfig.from_pretrained(model_name)
@@ -100,7 +106,6 @@ if __name__ == "__main__":
             df_valid = load_json_QuAD_v1(args.file_test)
             pass
 
-
         if args.file_bis != "":
             piaf_df_train, piaf_df_valid = train_test_split(
                 load_json_QuAD_v1(args.file_bis), test_size=0.1)
@@ -114,8 +119,9 @@ if __name__ == "__main__":
             model_name = 'facebook/bart-large'
             # config = BartConfig.from_pretrained(model_name)
             tokenizer = BartTokenizer.from_pretrained(model_name, do_lower_case=True)
-            model = BartForConditionalGeneration.from_pretrained(model_name)
-            model_created = True
+            if not model_created:
+                model = BartForConditionalGeneration.from_pretrained(model_name)
+                model_created = True
         else:
             model_name = 'bert-base-uncased'
             #config = BertConfig.from_pretrained(model_name)
@@ -216,3 +222,9 @@ if __name__ == "__main__":
                               save_steps=args.save_steps,
                               verbose=1,
                               )
+    # SAVING
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    save_model_dir = os.path.join(args.output_dir, 'checkpoint-last')
+    os.makedirs(save_model_dir)
+    model.save_pretrained(save_model_dir)

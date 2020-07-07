@@ -84,12 +84,13 @@ class DataProcessor():
         return examples
 
 
-def convert_examples_to_features_question_generation(examples,
-                                                     tokenizer,
-                                                     max_length=512,
-                                                     max_length_label=32,
-                                                     bart=False,
-                                                     ):
+def convert_examples_to_features_question_generation(
+        examples,
+        tokenizer,
+        max_length=512,
+        max_length_label=32,
+        bart=False,
+        ):
     """
     This function converts a list of examples into features that can be used
     as inputs for the question generation model.
@@ -108,12 +109,13 @@ def convert_examples_to_features_question_generation(examples,
     for (ex_index, example) in enumerate(examples):
         ######## ENCODING INPUT ########
         # This will encode both answer and context with a separator.
-        inputs = tokenizer.encode_plus(example.answer,
-                                       example.context,
-                                       add_special_tokens=True,
-                                       max_length=max_length,
-                                       truncation='only_second'
-                                       )
+        inputs = tokenizer.encode_plus(
+            example.answer,
+            example.context,
+            add_special_tokens=True,
+            max_length=max_length,
+            truncation='only_second'
+            )
         input_ids = inputs["input_ids"]
         token_type_ids = [0] * (len(tokenizer.encode(example.answer)) + 1)
         token_type_ids += [1] * (len(input_ids) - len(token_type_ids))
@@ -138,21 +140,23 @@ def convert_examples_to_features_question_generation(examples,
         ######## ENCODING LABEL ########
         if example.question is not None:
             if bart:
-                label = tokenizer.encode_plus(example.question,
-                                              max_length=max_length_label,
-                                              truncation=True,
-                                              )
+                label = tokenizer.encode_plus(
+                    example.question,
+                    max_length=max_length_label,
+                    truncation=True,
+                    )
                 label_ids = label["input_ids"]
                 padding_length = max_length_label - len(label_ids)
                 label_ids = label_ids + [-100] * padding_length
                 decoder_input_ids = shift_tokens_right(torch.tensor(label_ids).unsqueeze(0), -100).squeeze(0).tolist()
                 decoder_input_ids = [x if x != -100 else pad_token for x in decoder_input_ids]
             else:
-                label_ids = tokenizer.encode(example.question,
-                                             add_special_tokens=True,
-                                             max_length=max_length_label,
-                                             truncation=True,
-                                             )
+                label_ids = tokenizer.encode(
+                    example.question,
+                    add_special_tokens=True,
+                    max_length=max_length_label,
+                    truncation=True,
+                    )
 
                 decoder_input_ids = label_ids
                 padding_length = max_length_label - len(label_ids)
@@ -168,34 +172,37 @@ def convert_examples_to_features_question_generation(examples,
             assert len(decoder_attention_mask) == max_length_label, "Error with input length {} vs {}".format(
                 len(decoder_attention_mask), max_length_label)
 
-            features.append(InputFeatures(input_ids=input_ids,
-                                          attention_mask=attention_mask,
-                                          token_type_ids=token_type_ids,
-                                          label=label_ids,
-                                          decoder_input_ids=decoder_input_ids,
-                                          decoder_attention_mask=decoder_attention_mask,
-                                          )
-                            )
+            features.append(InputFeatures(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                label=label_ids,
+                decoder_input_ids=decoder_input_ids,
+                decoder_attention_mask=decoder_attention_mask,
+                )
+                )
         else:
-            features.append(InputFeatures(input_ids=input_ids,
-                                          attention_mask=attention_mask,
-                                          token_type_ids=token_type_ids,
-                                          label=None,
-                                          decoder_input_ids=decoder_input_ids,
-                                          decoder_attention_mask=decoder_attention_mask,
-                                          )
-                            )
+            features.append(InputFeatures(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                label=None,
+                decoder_input_ids=decoder_input_ids,
+                decoder_attention_mask=decoder_attention_mask,
+                )
+                )
     return features
 
 
-def load_examples_question_generation(answers,
-                                      sentences,
-                                      tokenizer,
-                                      max_length_seq,
-                                      max_length_label,
-                                      labels=None,
-                                      bart=False,
-                                      ):
+def load_examples_question_generation(
+        answers,
+        sentences,
+        tokenizer,
+        max_length_seq,
+        max_length_label,
+        labels=None,
+        bart=False,
+        ):
     """
     This function will creates features from set of answers, sentences and labels.
     INPUTS:
@@ -213,12 +220,13 @@ def load_examples_question_generation(answers,
     processor = DataProcessor()
     examples = processor.get_data_examples(answers, sentences, labels)
 
-    features = convert_examples_to_features_question_generation(examples,
-                                                                tokenizer,
-                                                                max_length=max_length_seq,
-                                                                max_length_label=max_length_label,
-                                                                bart=bart,
-                                                                )
+    features = convert_examples_to_features_question_generation(
+        examples,
+        tokenizer,
+        max_length=max_length_seq,
+        max_length_label=max_length_label,
+        bart=bart,
+        )
 
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
     all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
@@ -227,50 +235,53 @@ def load_examples_question_generation(answers,
     all_decoder_attention_mask = torch.tensor([f.decoder_attention_mask for f in features], dtype=torch.long)
     if labels is not None:
         all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
-        dataset = TensorDataset(all_input_ids,
-                                all_attention_mask,
-                                all_token_type_ids,
-                                all_decoder_input_ids,
-                                all_decoder_attention_mask,
-                                all_labels,
-                                )
+        dataset = TensorDataset(
+            all_input_ids,
+            all_attention_mask,
+            all_token_type_ids,
+            all_decoder_input_ids,
+            all_decoder_attention_mask,
+            all_labels,
+            )
     else:
-        dataset = TensorDataset(all_input_ids,
-                                all_attention_mask,
-                                all_token_type_ids,
-                                all_decoder_input_ids,
-                                all_decoder_attention_mask,
-                                )
+        dataset = TensorDataset(
+            all_input_ids,
+            all_attention_mask,
+            all_token_type_ids,
+            all_decoder_input_ids,
+            all_decoder_attention_mask,
+            )
     return dataset
 
 # UTILS FOR TRAINING
 
-def train_question_generation(model,
-                              train_dataset,
-                              tokenizer,
-                              num_train_epochs,
-                              train_batch_size,
-                              max_length_label,
-                              learning_rate,
-                              device,
-                              adam_epsilon=1e-8,
-                              logging_steps=None,
-                              logging_dir=None,
-                              gradient_accumulation_steps=1,
-                              max_grad_norm=1.0,
-                              weight_decay=0.0,
-                              warmup_steps=0,
-                              output_dir=None,
-                              max_steps=-1,
-                              num_cycles=1.0,
-                              evaluate_during_training=False,
-                              eval_dataset=None,
-                              eval_batch_size=8,
-                              generation_during_training=False,
-                              generation_dataset=None,
-                              save_steps=-1,
-                              verbose=0,
-                              ):
+def train_question_generation(
+        model,
+        train_dataset,
+        tokenizer,
+        num_train_epochs,
+        train_batch_size,
+        max_length_label,
+        learning_rate,
+        device,
+        adam_epsilon=1e-8,
+        logging_steps=None,
+        logging_dir=None,
+        gradient_accumulation_steps=1,
+        max_grad_norm=1.0,
+        weight_decay=0.0,
+        warmup_steps=0,
+        output_dir=None,
+        max_steps=-1,
+        num_cycles=1.0,
+        evaluate_during_training=False,
+        eval_dataset=None,
+        eval_batch_size=8,
+        generation_during_training=False,
+        generation_dataset=None,
+        save_steps=-1,
+        verbose=0,
+        ):
     """
     This function trains models on the train_dataset, eval_dataset being
     optional.
@@ -310,10 +321,11 @@ def train_question_generation(model,
     assert not (logging_steps > 0 and eval_dataset is None), "logging_steps > 0 but no eval_dataset provided"
 
     train_sampler = RandomSampler(train_dataset)
-    train_dataloader = DataLoader(train_dataset,
-                                  sampler=train_sampler,
-                                  batch_size=train_batch_size
-                                  )
+    train_dataloader = DataLoader(
+        train_dataset,
+        sampler=train_sampler,
+        batch_size=train_batch_size
+        )
 
     if logging_steps is None:
         logging_steps = len(train_dataloader) // (gradient_accumulation_steps * 5)
@@ -337,11 +349,12 @@ def train_question_generation(model,
                       lr=learning_rate,
                       eps=adam_epsilon,
                       )
-    scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(optimizer,
-                                                                   num_warmup_steps=warmup_steps,
-                                                                   num_training_steps=t_total,
-                                                                   num_cycles=num_cycles,
-                                                                   )
+    scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=warmup_steps,
+        num_training_steps=t_total,
+        num_cycles=num_cycles,
+        )
     # Train
     print("***** Running training *****")
     print("  Num examples = %d" % len(train_dataset))
@@ -441,17 +454,18 @@ def train_question_generation(model,
                         dict_print = {'step': global_step,
                                       'lr': scheduler.get_lr()[0],
                                       'tr_loss': (tr_loss - logging_loss) / logging_steps}
-                        result_eval = evaluate_question_generation(model=model,
-                                                                   eval_dataset=eval_dataset,
-                                                                   tokenizer=tokenizer,
-                                                                   device=device,
-                                                                   max_length_output=max_length_label,
-                                                                   eval_batch_size=eval_batch_size,
-                                                                   generation=generation_during_training,
-                                                                   generation_dataset=generation_dataset,
-                                                                   logging_dir=logging_dir,
-                                                                   verbose=1,
-                                                                   )
+                        result_eval = evaluate_question_generation(
+                            model=model,
+                            eval_dataset=eval_dataset,
+                            tokenizer=tokenizer,
+                            device=device,
+                            max_length_output=max_length_label,
+                            eval_batch_size=eval_batch_size,
+                            generation=generation_during_training,
+                            generation_dataset=generation_dataset,
+                            logging_dir=logging_dir,
+                            verbose=1,
+                            )
                         for key, value in result_eval.items():
                             dict_print['eval_{}'.format(key)] = value
                         train_loss_history.append((tr_loss - logging_loss) / logging_steps)
@@ -490,17 +504,18 @@ def train_question_generation(model,
     return train_loss_history, val_loss_history
 
 
-def evaluate_question_generation(model,
-                                 eval_dataset,
-                                 tokenizer,
-                                 device,
-                                 max_length_output=0,
-                                 eval_batch_size=8,
-                                 generation=False,
-                                 generation_dataset=None,
-                                 logging_dir=None,
-                                 verbose=1,
-                                 ):
+def evaluate_question_generation(
+        model,
+        eval_dataset,
+        tokenizer,
+        device,
+        max_length_output=0,
+        eval_batch_size=8,
+        generation=False,
+        generation_dataset=None,
+        logging_dir=None,
+        verbose=1,
+        ):
     """
     This function evaluates the loss and accuracy of the model
     on the evaluation set.
@@ -524,10 +539,11 @@ def evaluate_question_generation(model,
 
     eval_batch_size = eval_batch_size
     eval_sampler = SequentialSampler(eval_dataset)
-    eval_dataloader = DataLoader(eval_dataset,
-                                 sampler=eval_sampler,
-                                 batch_size=eval_batch_size,
-                                 )
+    eval_dataloader = DataLoader(
+        eval_dataset,
+        sampler=eval_sampler,
+        batch_size=eval_batch_size,
+        )
 
     # Eval
     if verbose > 0:
@@ -566,17 +582,17 @@ def evaluate_question_generation(model,
 
     ######## GENERATION ########
     if generation:
-        questions = generate_questions(model,
-                                       generation_dataset,
-                                       tokenizer,
-                                       device,
-                                       batch_size=1,
-                                       min_length=5,
-                                       max_length=max_length_output,
-                                       repetition_penalty=5,
-                                       length_penalty=7,
-                                       )
-
+        questions = generate_questions(
+            model,
+            generation_dataset,
+            tokenizer,
+            device,
+            batch_size=1,
+            min_length=5,
+            max_length=max_length_output,
+            repetition_penalty=5,
+            length_penalty=7,
+            )
 
         print('Examples:')
         for question in questions:
@@ -595,16 +611,17 @@ def evaluate_question_generation(model,
 
     return result
 
-def generate_questions(model,
-                       dataset,
-                       tokenizer,
-                       device,
-                       batch_size,
-                       min_length,
-                       max_length,
-                       repetition_penalty,
-                       length_penalty,
-                       ):
+def generate_questions(
+        model,
+        dataset,
+        tokenizer,
+        device,
+        batch_size,
+        min_length,
+        max_length,
+        repetition_penalty,
+        length_penalty,
+        ):
     """
     This function generates the question with the model on the given dataset.
     INPUTS:
