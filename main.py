@@ -97,6 +97,7 @@ if __name__ == "__main__":
             #config = CamembertConfig.from_pretrained(model_name)
             tokenizer = CamembertTokenizer.from_pretrained(model_name, do_lower_case=True)
         print("Model used:", model_name)
+
         # FQuAD
         try:
             df_train = load_json_QuAD_v2(args.file_train)
@@ -127,6 +128,7 @@ if __name__ == "__main__":
             #config = BertConfig.from_pretrained(model_name)
             tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=True)
         print('Model used:', model_name)
+
         # SQuAD
         try:
             df_train = load_json_QuAD_v2(args.file_train)
@@ -149,14 +151,15 @@ if __name__ == "__main__":
     labels_train = df_train["question"]
     t0 = time.time()
     print("Loading train dataset...", end='', flush=True)
-    train_dataset = load_examples_question_generation(answers=answers_train,
-                                                      sentences=sentences_train,
-                                                      labels=labels_train,
-                                                      tokenizer=tokenizer,
-                                                      max_length_seq=max_length_seq,
-                                                      max_length_label=max_length_label,
-                                                      bart=args.bart,
-                                                      )
+    train_dataset = load_examples_question_generation(
+        answers=answers_train,
+        sentences=sentences_train,
+        labels=labels_train,
+        tokenizer=tokenizer,
+        max_length_seq=max_length_seq,
+        max_length_label=max_length_label,
+        bart=args.bart,
+        )
     print("Done. {:.4f}s".format(time.time() - t0))
 
     print("Loading eval dataset...", end="", flush=True)
@@ -164,28 +167,30 @@ if __name__ == "__main__":
     sentences_eval = df_valid["context"]
     labels_eval = df_valid["question"]
     t0 = time.time()
-    eval_dataset = load_examples_question_generation(answers=answers_eval,
-                                                     sentences=sentences_eval,
-                                                     labels=labels_eval,
-                                                     tokenizer=tokenizer,
-                                                     max_length_seq=max_length_seq,
-                                                     max_length_label=max_length_label,
-                                                     bart=args.bart,
-                                                     )
+    eval_dataset = load_examples_question_generation(
+        answers=answers_eval,
+        sentences=sentences_eval,
+        labels=labels_eval,
+        tokenizer=tokenizer,
+        max_length_seq=max_length_seq,
+        max_length_label=max_length_label,
+        bart=args.bart,
+        )
     print("Done.{:.4f}s".format(time.time() - t0))
 
     print("Loading generation dataset...", end="", flush=True)
     t0 = time.time()
     idx_examples = random.sample(list(range(len(answers_eval))), 10)
 
-    generation_dataset = load_examples_question_generation(answers=answers_eval[idx_examples].values,
-                                                           sentences=sentences_eval[idx_examples].values,
-                                                           labels=labels_eval[idx_examples].values,
-                                                           tokenizer=tokenizer,
-                                                           max_length_seq=max_length_seq,
-                                                           max_length_label=max_length_label,
-                                                           bart=args.bart,
-                                                           )
+    generation_dataset = load_examples_question_generation(
+        answers=answers_eval[idx_examples].values,
+        sentences=sentences_eval[idx_examples].values,
+        labels=labels_eval[idx_examples].values,
+        tokenizer=tokenizer,
+        max_length_seq=max_length_seq,
+        max_length_label=max_length_label,
+        bart=args.bart,
+        )
     print("Done. {:.4f}s".format(time.time() - t0))
 
     # TRAINING
@@ -196,32 +201,34 @@ if __name__ == "__main__":
     #print('\ndecoder_attention_mask:', generation_dataset[0][4])
     #print('\nlabels:', generation_dataset[0][5].tolist())  # unknown token is due to -100
 
-    train_question_generation(model=model,
-                              train_dataset=train_dataset,
-                              tokenizer=tokenizer,
-                              num_train_epochs=args.epochs,
-                              train_batch_size=args.batch_size,
-                              max_length_label=max_length_label,
-                              learning_rate=args.learning_rate,
-                              device=device,
-                              adam_epsilon=1e-8,
-                              logging_steps=args.logging_steps,
-                              logging_dir=args.output_dir,
-                              gradient_accumulation_steps=args.gradient_accumulation_steps,
-                              max_grad_norm=1.0,
-                              weight_decay=1e-5,
-                              warmup_steps=0,
-                              output_dir=args.output_dir,
-                              max_steps=-1,
-                              num_cycles=7,
-                              evaluate_during_training=True,
-                              eval_dataset=eval_dataset,
-                              eval_batch_size=args.batch_size,
-                              generation_during_training=True,
-                              generation_dataset=generation_dataset,
-                              save_steps=args.save_steps,
-                              verbose=1,
-                              )
+    train_question_generation(
+        model=model,
+        train_dataset=train_dataset,
+        tokenizer=tokenizer,
+        num_train_epochs=args.epochs,
+        train_batch_size=args.batch_size,
+        max_length_label=max_length_label,
+        learning_rate=args.learning_rate,
+        device=device,
+        adam_epsilon=1e-8,
+        logging_steps=args.logging_steps,
+        logging_dir=args.output_dir,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        max_grad_norm=1.0,
+        weight_decay=1e-5,
+        warmup_steps=0,
+        output_dir=args.output_dir,
+        max_steps=-1,
+        num_cycles=7,
+        evaluate_during_training=True,
+        eval_dataset=eval_dataset,
+        eval_batch_size=args.batch_size,
+        generation_during_training=True,
+        generation_dataset=generation_dataset,
+        save_steps=args.save_steps,
+        verbose=1,
+        )
+
     # SAVING
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
