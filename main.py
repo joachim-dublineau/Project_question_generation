@@ -215,7 +215,7 @@ if __name__ == "__main__":
         logging_dir=args.output_dir,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         max_grad_norm=1.0,
-        weight_decay=1e-5,
+        weight_decay=args.weight_decay,
         warmup_steps=0,
         output_dir=args.output_dir,
         max_steps=-1,
