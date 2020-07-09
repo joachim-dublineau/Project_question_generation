@@ -9,3 +9,5 @@
 .idea/modules.xml
 .idea/Project_generation.iml
 .idea/vcs.xml
+*.xml
+*.iml
