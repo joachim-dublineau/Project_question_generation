@@ -50,17 +50,22 @@ parser.add_argument("file_test", help="name of the test file")
 parser.add_argument("output_dir", help="name of the directory for logs and checkpoints")
 
 # Optional arguments
-parser.add_argument("-bt", "--bart", help="true if bart else false", action="store", type=bool, default=False)
-parser.add_argument("-ls", "--logging_steps", help="number of steps between each evaluation", action="store", default=50, type=int)
-parser.add_argument("-ck", "--checkpoint", help="directory where to find last checkpoint", action='store', default=None)
-parser.add_argument("-lr", "--learning_rate", help="default learning rate", type=float, default=1e-4, action='store')
-parser.add_argument("-bs", "--batch_size", help="batch size for training", type=int, default=16, action='store')
-parser.add_argument("-ss", "--save_steps", help="number of gradient descent steps between each saving", type=int, default=400, action='store')
-parser.add_argument("-ep", "--epochs", help="number of epochs for training", type=int, default=10, action='store')
-parser.add_argument("-gs", "--gradient_accumulation_steps", help='number of steps before backward step', type=int, default=50, action='store')
-parser.add_argument("-wd", "--weight_decay", help="weight decay parameter for training", type=float, default=1e-5, action='store')
-parser.add_argument("-fb", "--file_bis", help="option to add name of piaf file (for fr model)", default="", action="store")
-
+parser.add_argument("-bt", "--bart", help="true if bart else false, default False", type=bool, default=False, action="store")
+parser.add_argument("-ls", "--logging_steps", help="number of steps between each evaluation, default 50", type=int, default=50, action="store")
+parser.add_argument("-mi", "--max_length_input", help="max length of input sequence, default 256", type=int, default=256, action="store")
+parser.add_argument("-mo", "--max_length_output", help="max_length of output sequence, defaut 21", type=int, default=21, action="store")
+parser.add_argument("-ck", "--checkpoint", help="directory where to find last checkpoint, default None", type=str, default=None, action='store')
+parser.add_argument("-lr", "--learning_rate", help="default learning rate, default 1e-4", type=float, default=1e-4, action='store')
+parser.add_argument("-bs", "--batch_size", help="batch size for training, default 16", type=int, default=16, action='store')
+parser.add_argument("-ss", "--save_steps", help="number of gradient descent steps between each saving, default 400", type=int, default=400, action='store')
+parser.add_argument("-ep", "--epochs", help="number of epochs for training, default 10", type=int, default=10, action='store')
+parser.add_argument("-gs", "--gradient_accumulation_steps", help='number of steps before backward step, default 50', type=int, default=50, action='store')
+parser.add_argument("-wd", "--weight_decay", help="weight decay parameter for training, default 1e-5", type=float, default=1e-5, action='store')
+parser.add_argument("-fb", "--file_bis", help="option to add name of piaf file (for fr model), default None", type=str, default="", action="store")
+parser.add_argument("-rp", "--repetition_penalty", help='repetition penalty parameter for generation, default 2', type=float, default=2.0, action="store")
+parser.add_argument("-lp", "--length_penalty", help='length penalty parameter for generation, default 2', type=float, default=2.0, action="store")
+parser.add_argument("-nb", "--num_beams", help="number of beams, parameter for generation, default 1", type=int, default=1, action="store")
+parser.add_argument("-tp", "--temperature", help="temperature parameter for softmax in generation, default 1.0", type=float, default=1.0, action="store")
 
 args = parser.parse_args()
 
@@ -143,8 +148,8 @@ if __name__ == "__main__":
 
     model.to(device)
 
-    max_length_seq = 256
-    max_length_label = 21
+    max_length_seq = args.max_length_input
+    max_length_label = args.max_length_output
 
     answers_train = df_train["answer_span"]
     sentences_train = df_train["context"]
@@ -194,12 +199,14 @@ if __name__ == "__main__":
     print("Done. {:.4f}s".format(time.time() - t0))
 
     # TRAINING
-    #print('input_ids:', generation_dataset[0][0].tolist())
-    #print('\nattention_mask:', generation_dataset[0][1])
-    #print('\ntoken_type_ids:', generation_dataset[0][2])
-    #print('\ndecoder_input_ids:', generation_dataset[0][3].tolist())
-    #print('\ndecoder_attention_mask:', generation_dataset[0][4])
-    #print('\nlabels:', generation_dataset[0][5].tolist())  # unknown token is due to -100
+    generation_hyperparameters = {
+        'min_length': 5,
+        'max_length': max_length_label,
+        'repetition_penalty': args.repetition_penalty,
+        'length_penalty': args.length_penalty,
+        'num_beams': args.num_beams,
+        'temperature': args.temperature,
+    }
 
     train_question_generation(
         model=model,
@@ -207,7 +214,6 @@ if __name__ == "__main__":
         tokenizer=tokenizer,
         num_train_epochs=args.epochs,
         train_batch_size=args.batch_size,
-        max_length_label=max_length_label,
         learning_rate=args.learning_rate,
         device=device,
         adam_epsilon=1e-8,
@@ -225,6 +231,7 @@ if __name__ == "__main__":
         eval_batch_size=args.batch_size,
         generation_during_training=True,
         generation_dataset=generation_dataset,
+        generation_hyperparameters=generation_hyperparameters,
         save_steps=args.save_steps,
         verbose=1,
         )

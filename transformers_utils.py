@@ -261,7 +261,6 @@ def train_question_generation(
         tokenizer,
         num_train_epochs,
         train_batch_size,
-        max_length_label,
         learning_rate,
         device,
         adam_epsilon=1e-8,
@@ -279,6 +278,7 @@ def train_question_generation(
         eval_batch_size=8,
         generation_during_training=False,
         generation_dataset=None,
+        generation_hyperparameters=None,
         save_steps=-1,
         verbose=0,
         ):
@@ -291,7 +291,6 @@ def train_question_generation(
     - tokenizer: Torch tokenizer object, tokenizer used for preprocessing.
     - num_train_epochs: int, number of epochs for training.
     - train_batch_size: int, size of mini batch.
-    - max_length_label: int, maximum size of the question.
     - learning_rate: int, learning rate.
     - device: torch cuda object, describing the device on which the training will be done.
     - adam_epsilon: float, epsilon parameter for optimizer AdamW.
@@ -309,6 +308,7 @@ def train_question_generation(
     - eval_batch_size: int, batch size for evaluation dataset.
     - generation_during_training: bool, saying whether to generate some question as examples.
     - generation_dataset: TensorDataset, will be used for generation in generation_during_training=True.
+    - generation_hyperparameters: dictionary, containing hyperparameters used for generation.
     - save_steps; int, number of steps between each checkpoint.
     - verbose: int, 0 for no verbose, 1 for displaying.
     OUTPUTS:
@@ -459,10 +459,10 @@ def train_question_generation(
                             eval_dataset=eval_dataset,
                             tokenizer=tokenizer,
                             device=device,
-                            max_length_output=max_length_label,
                             eval_batch_size=eval_batch_size,
                             generation=generation_during_training,
                             generation_dataset=generation_dataset,
+                            generation_hyperparameters=generation_hyperparameters,
                             logging_dir=logging_dir,
                             verbose=1,
                             )
@@ -509,10 +509,10 @@ def evaluate_question_generation(
         eval_dataset,
         tokenizer,
         device,
-        max_length_output=0,
         eval_batch_size=8,
         generation=False,
         generation_dataset=None,
+        generation_hyperparameters=None,
         logging_dir=None,
         verbose=1,
         ):
@@ -524,12 +524,11 @@ def evaluate_question_generation(
     - eval_dataset: Torch TensorDataset, dataset for evaluation.
     - tokenizer: Torch tokenizer object, tokenizer for preprocessing.
     - device: Torch cuda object, describing the device on which the evaluation will be done.
-    - max_length_output: int, max size of the generated sequence.
     - eval_batch_size: int, size of mini-batch.
     - eval_output_dir: string, directory to save results.
-    - num_to_evaluate: int, number of examples for evaluation.
     - generation: boolean, saying whether to generate.
     - generation_dataset: Torch TensorDataset, used for generation.
+    - generation_hyperparameters: dictionary, hyperparameters for generation.
     - logging_dir: str, name of the directory where to write the logs.
     - verbose: int, 0 for no verbose, 1 for displaying.
     OUTPUTS:
@@ -588,10 +587,7 @@ def evaluate_question_generation(
             tokenizer,
             device,
             batch_size=1,
-            min_length=5,
-            max_length=max_length_output,
-            repetition_penalty=5,
-            length_penalty=7,
+            generation_hyperparameters=generation_hyperparameters,
             )
 
         print('Examples:')
@@ -617,10 +613,7 @@ def generate_questions(
         tokenizer,
         device,
         batch_size,
-        min_length,
-        max_length,
-        repetition_penalty,
-        length_penalty,
+        generation_hyperparameters,
         ):
     """
     This function generates the question with the model on the given dataset.
@@ -630,10 +623,7 @@ def generate_questions(
     - tokenizer: Torch tokenizer object.
     - device: Torch cuda object, describing the device on which the calculation will be done.
     - batch_size: int, size of mini-batch.
-    - min_length: int, min length of generated question.
-    - max_length: int, max length of generated question.
-    - repetition_penalty: float, between 1 and infinity (max penalty).
-    - length_penalty: float, between 1 and infinity (max penalty).
+    - generation_hyperparameters: dictionary, hyperparameters for generation.
     OUTPUTS:
     - results: list of string, predictions.
     """
@@ -651,14 +641,11 @@ def generate_questions(
                       'attention_mask': batch[1],
                       # 'token_type_ids'        : batch[2],
                       'decoder_start_token_id': tokenizer.cls_token_id,
-                      'min_length': min_length,
-                      'max_length': max_length,
-                      'repetition_penalty': repetition_penalty,
-                      'length_penalty': length_penalty,
                       'bos_token_id': tokenizer.bos_token_id,
                       'pad_token_id': tokenizer.pad_token_id,
                       'eos_token_id': tokenizer.eos_token_id,
                       }
+            inputs.update(generation_hyperparameters)
             outputs = model.generate(**inputs)
 
         for output in outputs:
