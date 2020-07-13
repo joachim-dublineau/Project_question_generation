@@ -641,10 +641,6 @@ def generate_questions(
             inputs = {'input_ids': batch[0],
                       'attention_mask': batch[1],
                       # 'token_type_ids'        : batch[2],
-                      'decoder_start_token_id': tokenizer.cls_token_id,
-                      'bos_token_id': tokenizer.bos_token_id,
-                      'pad_token_id': tokenizer.pad_token_id,
-                      'eos_token_id': tokenizer.vocab["?"],
                       }
             inputs.update(generation_hyperparameters)
             outputs = model.generate(**inputs)

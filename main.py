@@ -209,6 +209,10 @@ if __name__ == "__main__":
         'length_penalty': args.length_penalty,
         'num_beams': args.num_beams,
         'temperature': args.temperature,
+        'decoder_start_token_id': tokenizer.cls_token_id,
+        'bos_token_id': tokenizer.bos_token_id,
+        'pad_token_id': tokenizer.pad_token_id,
+        'eos_token_id': tokenizer.vocab["?"],
     }
 
     train_question_generation(
