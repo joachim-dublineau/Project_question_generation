@@ -212,7 +212,7 @@ if __name__ == "__main__":
         'decoder_start_token_id': tokenizer.cls_token_id,
         'bos_token_id': tokenizer.bos_token_id,
         'pad_token_id': tokenizer.pad_token_id,
-        'eos_token_id': tokenizer.vocab["?"],
+        'eos_token_id': tokenizer.convert_tokens_to_ids("?"),
     }
 
     train_question_generation(
