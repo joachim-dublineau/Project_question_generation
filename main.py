@@ -36,6 +36,8 @@ from transformers_utils import (load_json_QuAD_v1,
                                 load_json_QuAD_v2,
                                 load_examples_question_generation,
                                 train_question_generation,
+                                generate_questions,
+                                evaluate_results,
                                 )
 
 import argparse
@@ -66,6 +68,7 @@ parser.add_argument("-rp", "--repetition_penalty", help='repetition penalty para
 parser.add_argument("-lp", "--length_penalty", help='length penalty parameter for generation, default 2', type=float, default=2.0, action="store")
 parser.add_argument("-nb", "--num_beams", help="number of beams, parameter for generation, default 1", type=int, default=1, action="store")
 parser.add_argument("-tp", "--temperature", help="temperature parameter for softmax in generation, default 1.0", type=float, default=1.0, action="store")
+parser.add_argument("-eo", "--evaluate_on", help="number of examples on which to evaluate the model, default 100", type=int, default=100, action="store")
 
 args = parser.parse_args()
 
@@ -242,3 +245,27 @@ if __name__ == "__main__":
     save_model_dir = os.path.join(args.output_dir, 'checkpoint-last')
     os.makedirs(save_model_dir)
     model.save_pretrained(save_model_dir)
+
+    # COMPUTING METRIC:
+    print("Computing metrics...", end="", flush=True)
+    idx_examples = random.sample(list(range(len(answers_eval))), args.evaluate_on)
+    metric_dataset = load_examples_question_generation(
+        answers=answers_eval[idx_examples].values,
+        sentences=sentences_eval[idx_examples].values,
+        labels=labels_eval[idx_examples].values,
+        tokenizer=tokenizer,
+        max_length_seq=max_length_seq,
+        max_length_label=max_length_label,
+        )
+    results = generate_questions(
+        model=model,
+        dataset=metric_dataset,
+        tokenizer=tokenizer,
+        device=device,
+        batch_size=args.batch_size,
+        generation_hyperparameters=generation_hyperparameters,
+    )
+    metrics = evaluate_results(results=results)
+    print("Done.")
+    print("Retrieval score =", metrics[0], "BLEU score =", metrics[1])
+

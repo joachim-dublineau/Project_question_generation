@@ -43,3 +43,4 @@ optional arguments:
 -  -lp, --length_penalty LENGTH_PENALTY: length penalty parameter for generation, default 2
 -  -nb, --num_beams NUM_BEAMS: number of beams, parameter for generation, default 1
 -  -tp, --temperature TEMPERATURE: temperature parameter for softmax in generation, default 1.0
+-  -eo, --evaluate_on EVALUATE_ON: number of examples on which to evaluate the model, default 100

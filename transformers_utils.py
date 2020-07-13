@@ -27,6 +27,7 @@ from transformers.modeling_bart import shift_tokens_right
 from transformers import (AdamW,
                           get_linear_schedule_with_warmup,
                           get_cosine_with_hard_restarts_schedule_with_warmup)
+from nltk.translate.bleu_score import sentence_bleu
 
 
 # UTILS FOR PROCESSING
@@ -643,7 +644,7 @@ def generate_questions(
                       'decoder_start_token_id': tokenizer.cls_token_id,
                       'bos_token_id': tokenizer.bos_token_id,
                       'pad_token_id': tokenizer.pad_token_id,
-                      'eos_token_id': tokenizer.eos_token_id,
+                      'eos_token_id': tokenizer.vocab["?"],
                       }
             inputs.update(generation_hyperparameters)
             outputs = model.generate(**inputs)
@@ -689,14 +690,15 @@ def load_json_QuAD_v2(file_name):
                         contexts_list.append(paragraph['context'])
                         id_context_list.append(id_paragraph)
 
-    df_ = pd.DataFrame({'id_question': id_question_list,
-                        'question': questions_list,
-                        'answer_span': answer_span_list,
-                        'answer_span_start': answer_span_start_list,
-                        'id_context': id_context_list,
-                        'context': contexts_list,
-                        'doc_title': doc_titles_list
-                        })
+    df_ = pd.DataFrame(
+        {'id_question': id_question_list,
+        'question': questions_list,
+        'answer_span': answer_span_list,
+        'answer_span_start': answer_span_start_list,
+        'id_context': id_context_list,
+        'context': contexts_list,
+        'doc_title': doc_titles_list
+        })
     return df_
 
 
@@ -722,12 +724,65 @@ def load_json_QuAD_v1(file_name):
                     contexts_list.append(paragraph['context'])
                     id_context_list.append(id_paragraph)
 
-    df_ = pd.DataFrame({'id_question': id_question_list,
-                        'question': questions_list,
-                        'answer_span': answer_span_list,
-                        'answer_span_start': answer_span_start_list,
-                        'id_context': id_context_list,
-                        'context': contexts_list,
-                        'doc_title': doc_titles_list
-                        })
+    df_ = pd.DataFrame(
+        {'id_question': id_question_list,
+        'question': questions_list,
+        'answer_span': answer_span_list,
+        'answer_span_start': answer_span_start_list,
+        'id_context': id_context_list,
+        'context': contexts_list,
+        'doc_title': doc_titles_list
+        })
     return df_
+
+# UTILS FOR METRIC
+
+def retrieval_score(generated_sequences, labels_sequences):
+    """
+    This function compute the retrieval score based on the bleu score.
+    INPUTS:
+    - generated_sequences: list, list of list of strings of the words of each generated sequence.
+    - labels_sequences: list, list of list of string of the words of each label.
+    OUTPUS:
+    - retrieval_score: float, retrieval score as described in the report.
+    - bleu_score: float, average BLEU score
+    """
+    n = len(generated_sequences)
+    bleu_scores = np.zeros((n, n), dtype=np.float)
+    retrieval_score = 0
+    for i in range(n):
+        for j in range(n):
+            bleu_scores[i, j] = sentence_bleu(
+                references=[labels_sequences[j]],
+                hypothesis=generated_sequences[i],
+                weights={1, 0, 0, 0},
+                )
+        argsort = np.argsort(-bleu_scores[i, :])
+        index = np.where(argsort == i)[0]
+        retrieval_score += index
+    return 1 - retrieval_score/n**2, np.mean(np.diag(bleu_scores))
+
+
+def evaluate_results(results):
+    """
+    This function uses the output of the generate_questions functions to compute the retrieval score.
+    INPUTS:
+    - results: list of tuple, containing the generated strings and the generated labels as obtained with generate_questions.
+    OUTPUTS:
+    - retrieval_score: float, retrieval score as described in the report.
+    - bleu_score: float, average BLEU score
+    """
+    generated, labels = [], []
+    for batch in results:
+        batch_gen = batch[0]
+        batch_lab = batch[1]
+        for elem in batch_gen:
+            last_gen = elem.split()
+            last_gen[-1] = last_gen[-1][:-1]
+            generated.append(last_gen)
+        for elem in batch_lab:
+            elem = elem.replace('[UNK]', "")
+            last_lab = elem.split()
+            last_lab[-1] = last_lab[-1][:-1]
+            labels.append(last_lab)
+    return retrieval_score(generated, labels)

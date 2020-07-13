@@ -11,6 +11,7 @@ numpy = "*"
 torch = "*"
 transformers = "==3.0.0"
 scikit-learn = "*"
+nltk = "*"
 
 [requires]
 python_version = "3.8"
