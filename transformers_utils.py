@@ -754,7 +754,7 @@ def retrieval_score(generated_sequences, labels_sequences):
                 weights={1, 0, 0, 0},
                 )
         argsort = np.argsort(-bleu_scores[i, :])
-        index = np.where(argsort == i)[0]
+        index = np.where(argsort == i)[0][0]
         retrieval_score += index
     return 1 - retrieval_score/n**2, np.mean(np.diag(bleu_scores))
 
