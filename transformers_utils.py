@@ -188,6 +188,8 @@ def convert_examples_to_features_question_generation(
                 attention_mask=attention_mask,
                 token_type_ids=token_type_ids,
                 label=None,
+                decoder_input_ids=None,
+                decoder_attention_mask=None,
                 )
                 )
     return features
@@ -230,10 +232,10 @@ def load_examples_question_generation(
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
     all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
     all_token_type_ids = torch.tensor([f.token_type_ids for f in features], dtype=torch.long)
-    all_decoder_input_ids = torch.tensor([f.decoder_input_ids for f in features], dtype=torch.long)
-    all_decoder_attention_mask = torch.tensor([f.decoder_attention_mask for f in features], dtype=torch.long)
     if labels is not None:
         all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
+        all_decoder_input_ids = torch.tensor([f.decoder_input_ids for f in features], dtype=torch.long)
+        all_decoder_attention_mask = torch.tensor([f.decoder_attention_mask for f in features], dtype=torch.long)
         dataset = TensorDataset(
             all_input_ids,
             all_attention_mask,
@@ -247,8 +249,6 @@ def load_examples_question_generation(
             all_input_ids,
             all_attention_mask,
             all_token_type_ids,
-            all_decoder_input_ids,
-            all_decoder_attention_mask,
             )
     return dataset
 
@@ -606,6 +606,7 @@ def evaluate_question_generation(
 
     return result
 
+
 def generate_questions(
         model,
         dataset,
@@ -613,7 +614,7 @@ def generate_questions(
         device,
         batch_size,
         generation_hyperparameters,
-        ):
+):
     """
     This function generates the question with the model on the given dataset.
     INPUTS:
@@ -630,11 +631,12 @@ def generate_questions(
     dataloader = DataLoader(dataset, sampler=sampler, batch_size=batch_size)
     iterator = dataloader
     results_generation = []
+    is_labeled = -1
     for batch in iterator:
         results = []
         model.eval()
         batch = tuple(t.to(device) for t in batch)
-
+        if is_labeled == -1: is_labeled = (len(batch) == 6)
         with torch.no_grad():
             inputs = {'input_ids': batch[0],
                       'attention_mask': batch[1],
@@ -648,14 +650,18 @@ def generate_questions(
                                             skip_special_tokens=True,
                                             )
                            )
-        labels = []
-        for label in batch[5]:
-            label[label == -100] = tokenizer.pad_token_id
-            labels.append(tokenizer.decode(label.squeeze(0),
-                                           skip_special_tokens=True,
-                                           )
-                          )
-        results_generation.append((results, labels))
+        if is_labeled:
+            labels = []
+            for label in batch[5]:
+                label[label == -100] = tokenizer.pad_token_id
+                labels.append(tokenizer.decode(label.squeeze(0),
+                                               skip_special_tokens=True,
+                                               )
+                              )
+
+            results_generation.append((results, labels))
+        else:
+            results_generation.append(results)
     return results_generation
 
 # UTILS FOR DATA LOADING
