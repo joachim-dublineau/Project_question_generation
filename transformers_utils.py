@@ -188,8 +188,6 @@ def convert_examples_to_features_question_generation(
                 attention_mask=attention_mask,
                 token_type_ids=token_type_ids,
                 label=None,
-                decoder_input_ids=decoder_input_ids,
-                decoder_attention_mask=decoder_attention_mask,
                 )
                 )
     return features
