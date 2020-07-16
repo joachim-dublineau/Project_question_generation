@@ -646,18 +646,20 @@ def generate_questions(
             outputs = model.generate(**inputs)
 
         for output in outputs:
-            results.append(tokenizer.decode(output.squeeze(0),
-                                            skip_special_tokens=True,
-                                            )
-                           )
+            results.append(tokenizer.decode(
+                output.squeeze(0),
+                skip_special_tokens=True,
+                )
+                )
         if is_labeled:
             labels = []
             for label in batch[5]:
                 label[label == -100] = tokenizer.pad_token_id
-                labels.append(tokenizer.decode(label.squeeze(0),
-                                               skip_special_tokens=True,
-                                               )
-                              )
+                labels.append(tokenizer.decode(
+                    label.squeeze(0),
+                    skip_special_tokens=True,
+                    )
+                    )
 
             results_generation.append((results, labels))
         else:
