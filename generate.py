@@ -156,5 +156,8 @@ if __name__ == "__main__":
     df_generation["question"] = generated_questions
 
     # SAVING
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
     df_generation.to_csv(args.output_dir + "/generated_questions.csv", sep=",")
+    print("Generated.")
 
