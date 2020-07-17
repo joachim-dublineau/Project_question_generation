@@ -2,9 +2,8 @@
 
 ######## Script: Training of an EncoderDecoderModel with transformers_utils.py ########
 
-# This python file contains a script that shows how to train an EncoderDecoderModel.
-# Attention: this script is supposed to work only for BERT and CamemBERT, other models
-# were not tested.
+# This python file contains a script that shows how to train an EncoderDecoderModel or a BART model.
+# Attention: this script is supposed to work only for BERT, BART and CamemBERT, other models were not tested.
 
 # Author: Joachim Dublineau
 # Zelros A.I.

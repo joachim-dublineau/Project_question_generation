@@ -12,6 +12,7 @@ torch = "*"
 transformers = "==3.0.0"
 scikit-learn = "*"
 nltk = "*"
+spacy = "*"
 
 [requires]
 python_version = "3.8"
