@@ -2,7 +2,10 @@
 
 ## Question Generation with Transformers on SQuAD and FQuAD
 
-**Zelros A.I.** [Z](logo.jpg)
+**Zelros A.I.** 
+<p align="center">
+  <img width="30%", src="https://www.actuia.com/wp-content/uploads/2018/12/zelros-696x348.png">
+</p>
 
 
 ### Train a model
