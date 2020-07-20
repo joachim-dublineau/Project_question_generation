@@ -249,7 +249,7 @@ if __name__ == "__main__":
     os.makedirs(save_model_dir)
     model.save_pretrained(save_model_dir)
 
-    # COMPUTING METRIC:
+    # COMPUTING METRICS:
     print("Computing metrics...", end="", flush=True)
     idx_examples = random.sample(list(range(len(answers_eval))), args.evaluate_on)
     metric_dataset = load_examples_question_generation(
@@ -270,5 +270,7 @@ if __name__ == "__main__":
     )
     metrics = evaluate_results(results=results)
     print("Done.")
+    with open(args.output_dir + '/logs.txt', "a") as writer:
+        writer.write("Retrieval score = {} , BLEU score = {}".format(metrics[0], metrics[1]))
     print("Retrieval score =", metrics[0], "BLEU score =", metrics[1])
 
