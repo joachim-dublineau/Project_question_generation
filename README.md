@@ -11,8 +11,7 @@
 ### Train a model
 This repository contains some functions and a script able to train an EncoderDecoderModel or a BART model from Hugging Face's transformers library (https://github.com/huggingface/transformers).
 
-It works with BART, BERT and CamemBERT and it uses SQuAD (https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v2.0.json
-https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v2.0.json) and FQuAD (https://storage.googleapis.com/illuin/fquad/train.json.zip
+It works with BART, BERT and CamemBERT and it uses SQuAD (https://rajpurkar.github.io/SQuAD-explorer/dataset/) and FQuAD (https://storage.googleapis.com/illuin/fquad/train.json.zip
  https://storage.googleapis.com/illuin/fquad/valid.json.zip) to train these previous models.
 
 Example with only positional arguments:
