@@ -281,7 +281,7 @@ if __name__ == "__main__":
     with open(args.output_dir + '/logs.txt', "a") as writer:
         for metric in metrics_dict:
             str_ += metric + ": {:.3f}, ".format(metrics_dict[metric])
-        str_ += "{:.3f}".format(retrieval_score(hypothesis, references))
+        str_ += "Retrieval score: {:.3f}".format(retrieval_score(hypothesis, references))
     writer.write(str_)
     print(str_)
 
