@@ -757,34 +757,9 @@ def retrieval_score(generated_sequences, labels_sequences):
             bleu_scores[i, j] = sentence_bleu(
                 references=[labels_sequences[j]],
                 hypothesis=generated_sequences[i],
-                weights={1, 0, 0, 0},
+                weights={1, 1, 0, 0},
                 )
         argsort = np.argsort(-bleu_scores[i, :])
         index = np.where(argsort == i)[0][0]
         retrieval_score += index
     return 1 - retrieval_score/n**2, np.mean(np.diag(bleu_scores))
-
-
-def evaluate_results(results):
-    """
-    This function uses the output of the generate_questions functions to compute the retrieval score.
-    INPUTS:
-    - results: list of tuple, containing the generated strings and the generated labels as obtained with generate_questions.
-    OUTPUTS:
-    - retrieval_score: float, retrieval score as described in the report.
-    - bleu_score: float, average BLEU score
-    """
-    generated, labels = [], []
-    for batch in results:
-        batch_gen = batch[0]
-        batch_lab = batch[1]
-        for elem in batch_gen:
-            last_gen = elem.split()
-            last_gen[-1] = last_gen[-1][:-1]
-            generated.append(last_gen)
-        for elem in batch_lab:
-            elem = elem.replace('[UNK]', "")
-            last_lab = elem.split()
-            last_lab[-1] = last_lab[-1][:-1]
-            labels.append(last_lab)
-    return retrieval_score(generated, labels)
