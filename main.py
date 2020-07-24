@@ -36,10 +36,11 @@ from transformers_utils import (load_json_QuAD_v1,
                                 load_examples_question_generation,
                                 train_question_generation,
                                 generate_questions,
-                                evaluate_results,
+                                retrieval_score,
                                 )
 
 import argparse
+from nlgeval import NLGEval
 
 # ARGUMENT PARSING
 
@@ -268,9 +269,19 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         generation_hyperparameters=generation_hyperparameters,
     )
-    metrics = evaluate_results(results=results)
+    references, hypothesis = [], []
+    for elem in results:
+        for i in range(len(elem[0])):
+            references.append(elem[1][i])
+            hypothesis.append(elem[0][i])
+    nlgeval = NLGEval()  # loads the models
+    metrics_dict = nlgeval.compute_metrics([references], hypothesis)
     print("Done.")
+    str_ = ""
     with open(args.output_dir + '/logs.txt', "a") as writer:
-        writer.write("Retrieval score = {} , BLEU score = {}".format(metrics[0], metrics[1]))
-    print("Retrieval score =", metrics[0], "BLEU score =", metrics[1])
+        for metric in metrics_dict:
+            str_ += metric + ": {:.3f}, ".format(metrics_dict[metric])
+        str_ += "{:.3f}".format(retrieval_score(hypothesis, references))
+    writer.write(str_)
+    print(str_)
 
