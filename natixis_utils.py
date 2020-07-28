@@ -102,7 +102,8 @@ class DataPrepModelAssess:
             if not only_valid_intents or self.is_valid_elt(intent):
                 answers_content = intent.get('details', {}).get('answers', [])
                 answers_list = self.parse_answers_content(answers_content)
-                row_dict = {'name': intent.get('name'),
+                row_dict = {'id': intent.get('id'),
+                            'name': intent.get('name'),
                             'title': intent.get('title'),
                             'questions': intent['details']['sentences'],  # str
                             'context': str(' '.join(answers_list))}
@@ -599,6 +600,6 @@ def separating_keywords(df, channel):
         row = iterrow[1]
         local_keywords = row[channel].split(', ')
         for keyword in local_keywords:
-            row_list.append({"answer_span": keyword, "context": row["context"]})
-    return pd.DataFrame(row_list, columns=["answer_span", "context"])
+            row_list.append({"id": row["id"], "answer_span": keyword, "context": row["context"]})
+    return pd.DataFrame(row_list, columns=["id", "answer_span", "context"])
 

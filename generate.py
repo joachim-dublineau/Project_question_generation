@@ -154,6 +154,7 @@ if __name__ == "__main__":
             generated_questions.append(question)
 
     df_generation["question"] = generated_questions
+    df_generation["id"]
 
     # SAVING
     if not os.path.exists(args.output_dir):
