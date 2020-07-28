@@ -9,3 +9,5 @@
 *.iml
 translate_squad.ipynb
 .ipynb_checkpoints/translate_squad-checkpoint.ipynb
+.ipynb_checkpoints/test_natixis-checkpoint.ipynb
+test_natixis.ipynb
