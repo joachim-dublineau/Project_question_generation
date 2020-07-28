@@ -109,7 +109,7 @@ class DataPrepModelAssess:
                             'context': str(' '.join(answers_list))}
                 rows_list.append(row_dict)
 
-        df_scenario = pd.DataFrame(rows_list, columns=['name', 'title', 'questions', 'context'])
+        df_scenario = pd.DataFrame(rows_list, columns=["id", 'name', 'title', 'questions', 'context'])
 
         return df_scenario.loc[df_scenario['name'] != 'home', :].reset_index()  # WHY DID WE REMOVED 'home'?
 
