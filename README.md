@@ -61,6 +61,7 @@ All arguments:
 positional arguments:
 - file_data: name of the file containing the contexts
 - output_dir: name of the directory where to export the generated questions
+- file_name: name of the csv file that will be saved
 
 optional arguments
 

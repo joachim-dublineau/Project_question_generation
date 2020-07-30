@@ -40,6 +40,7 @@ parser = argparse.ArgumentParser()
 # Compulsory arguments
 parser.add_argument("file_data", help="name of the file containing the contexts")
 parser.add_argument("output_dir", help="name of the directory where to export the generated questions")
+parser.add_argument("file_name", help="name of the csv file that will be saved")
 
 # Optional arguments
 parser.add_argument("-bt", "--bart", help="true if bart else false, default False", type=bool, default=False, action="store")
@@ -159,6 +160,6 @@ if __name__ == "__main__":
     # SAVING
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
-    df_generation.to_csv(args.output_dir + "/generated_questions.csv", sep=",")
+    df_generation.to_csv(args.output_dir + "/" + args.file_name, sep=",")
     print("Generated.")
 
