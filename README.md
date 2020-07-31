@@ -13,6 +13,8 @@ This repository contains some functions and a script able to train an EncoderDec
 
 It works with BART, BERT and CamemBERT and it uses SQuAD (https://rajpurkar.github.io/SQuAD-explorer/dataset/) and FQuAD (https://storage.googleapis.com/illuin/fquad/train.json.zip
  https://storage.googleapis.com/illuin/fquad/valid.json.zip) to train these previous models.
+ 
+In order to make the evaluate function works, please make sure to install this library: https://github.com/Maluuba/nlg-eval .
 
 Example with only positional arguments:
 ```
@@ -31,6 +33,7 @@ positional arguments:
 optional arguments:
 
 -  -h, --help show this help message and exit
+-  -csv, --is_csv: true if file_train is a csv file, default False
 -  -bt, --bart BART: true if bart else false, default False
 -  -ls, --logging_steps LOGGING_STEPS: number of steps between each evaluation, default 50
 -  -mi, --max_length_input MAX_LENGTH_INPUT: max length of input sequence, default 256
@@ -52,6 +55,10 @@ optional arguments:
 ### Generate with a model
 It is also possible to generate questions based on a dataset that only contains contexts. In order to do so, the script
 generate.py should be used.
+You will also need to configure spacy with:
+```python -m spacy download fr_core_news_sm```
+
+
 ```
 python generate.py scenario_natixis_prod.json generated_questions
 ```

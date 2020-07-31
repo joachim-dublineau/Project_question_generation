@@ -52,6 +52,7 @@ parser.add_argument("file_test", help="name of the test file")
 parser.add_argument("output_dir", help="name of the directory for logs and checkpoints")
 
 # Optional arguments
+parser.add_argument("-csv", "--is_csv", help="true if the file_train and file_test are csv, default false", type=bool, default=False, action="store")
 parser.add_argument("-bt", "--bart", help="true if bart else false, default False", type=bool, default=False, action="store")
 parser.add_argument("-ls", "--logging_steps", help="number of steps between each evaluation, default 50", type=int, default=50, action="store")
 parser.add_argument("-mi", "--max_length_input", help="max length of input sequence, default 256", type=int, default=256, action="store")
@@ -107,13 +108,17 @@ if __name__ == "__main__":
         print("Model used:", model_name)
 
         # FQuAD
-        try:
-            df_train = load_json_QuAD_v2(args.file_train)
-            df_valid = load_json_QuAD_v2(args.file_test)
-        except:
-            df_train = load_json_QuAD_v1(args.file_train)
-            df_valid = load_json_QuAD_v1(args.file_test)
-            pass
+        if args.is_csv:
+            df_train = pd.read_csv(args.file_train)
+            df_valid = pd.read_csv(args.file_test)
+        else:
+            try:
+                df_train = load_json_QuAD_v2(args.file_train)
+                df_valid = load_json_QuAD_v2(args.file_test)
+            except:
+                df_train = load_json_QuAD_v1(args.file_train)
+                df_valid = load_json_QuAD_v1(args.file_test)
+                pass
 
         if args.file_bis != "":
             piaf_df_train, piaf_df_valid = train_test_split(
@@ -138,13 +143,17 @@ if __name__ == "__main__":
         print('Model used:', model_name)
 
         # SQuAD
-        try:
-            df_train = load_json_QuAD_v2(args.file_train)
-            df_valid = load_json_QuAD_v2(args.file_test)
-        except:
-            df_train = load_json_QuAD_v1(args.file_train)
-            df_valid = load_json_QuAD_v1(args.file_test)
-            pass
+        if args.is_csv:
+            df_train = pd.read_csv(args.file_train)
+            df_valid =  pd.read_csv(args.file_test)
+        else:
+            try:
+                df_train = load_json_QuAD_v2(args.file_train)
+                df_valid = load_json_QuAD_v2(args.file_test)
+            except:
+                df_train = load_json_QuAD_v1(args.file_train)
+                df_valid = load_json_QuAD_v1(args.file_test)
+                pass
 
     if not model_created:
         model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_name, model_name)
