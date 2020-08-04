@@ -145,7 +145,7 @@ if __name__ == "__main__":
         # SQuAD
         if args.is_csv:
             df_train = pd.read_csv(args.file_train)
-            df_valid =  pd.read_csv(args.file_test)
+            df_valid = pd.read_csv(args.file_test)
         else:
             try:
                 df_train = load_json_QuAD_v2(args.file_train)
