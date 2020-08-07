@@ -60,7 +60,7 @@ You will also need to configure spacy with:
 
 
 ```
-python generate.py scenario_natixis_prod.json generated_questions
+python generate.py my_file.json generated_questions
 ```
 
 All arguments:
