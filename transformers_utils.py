@@ -118,6 +118,7 @@ def convert_examples_to_features_question_generation(
             truncation='only_second'
             )
         input_ids = inputs["input_ids"]
+
         token_type_ids = [0] * (len(tokenizer.encode(example.answer)) + 1)
         token_type_ids += [1] * (len(input_ids) - len(token_type_ids))
 
@@ -131,10 +132,10 @@ def convert_examples_to_features_question_generation(
         attention_mask = attention_mask + [0] * padding_length
         token_type_ids = token_type_ids + [0] * padding_length
 
-        assert len(input_ids) == max_length, "Error with input length {} vs {}".format(len(input_ids), max_length)
-        assert len(attention_mask) == max_length, "Error with input length {} vs {}".format(len(attention_mask),
+        assert len(input_ids) == max_length, "Error with input ids length {} vs {}".format(len(input_ids), max_length)
+        assert len(attention_mask) == max_length, "Error with mask length {} vs {}".format(len(attention_mask),
                                                                                             max_length)
-        assert len(token_type_ids) == max_length, "Error with input length {} vs {}".format(len(token_type_ids),
+        assert len(token_type_ids) == max_length, "Error with token length {} vs {}".format(len(token_type_ids),
                                                                                             max_length)
 
 

@@ -603,3 +603,25 @@ def separating_keywords(df, channel):
             row_list.append({"id": row["id"], "answer_span": keyword, "context": row["context"]})
     return pd.DataFrame(row_list, columns=["id", "answer_span", "context"])
 
+def highlight_answers(answers, contexts, token, optional_string_to_add):
+    """
+    This functions will highlight the answers in the context using the highlight token.
+    INPUTS:
+    - answers: list of string, answer must be in context.
+    - contexts: list of contexts.
+    - token: string, token recognized by the tokenizer as the highlight token.
+    - optional_string_to_add: string, optional to add at the beginning of the context.
+    OUTPUTS:
+    - highlighted_contexts: list of strings, contexts with highlighted answers.
+    """
+    highlighted_contexts = []
+    for i in range(len(contexts)):
+        context = contexts[i]
+        answer = answers[i]
+        index = context.find(answer)
+        if index != -1:
+            highlighted_context = context[:index] + " " + token + " " + answer + " " + token + " " + context[index + len(answer):]
+            highlighted_contexts.append(optional_string_to_add + highlighted_context)
+    return highlighted_contexts
+
+

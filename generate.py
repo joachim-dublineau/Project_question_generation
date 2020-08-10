@@ -18,20 +18,29 @@ import os
 
 import torch
 
-from transformers import (BertConfig,
-                          BertTokenizer,
-                          CamembertConfig,
-                          CamembertTokenizer,
-                          EncoderDecoderConfig,
-                          EncoderDecoderModel,
-                          BartConfig,
-                          BartTokenizer,
-                          BartForConditionalGeneration,
-                          )
+from transformers import (
+    BertConfig,
+    BertTokenizer,
+    CamembertConfig,
+    CamembertTokenizer,
+    EncoderDecoderConfig,
+    EncoderDecoderModel,
+    BartConfig,
+    BartTokenizer,
+    BartForConditionalGeneration,
+    T5Config,
+    T5Tokenizer,
+    T5ForConditionalGeneration,
+    )
 
 from transformers_utils import load_examples_question_generation, generate_questions
 import spacy
-from natixis_utils import DataPrepModelAssess, clean_dataframe, custom_tokenizer, select_keywords_spacy, separating_keywords
+from natixis_utils import \
+    DataPrepModelAssess, \
+    clean_dataframe, custom_tokenizer, \
+    select_keywords_spacy, \
+    separating_keywords, \
+    highlight_answers
 import argparse
 
 # ARGUMENT PARSING
@@ -44,7 +53,9 @@ parser.add_argument("file_name", help="name of the csv file that will be saved")
 
 # Optional arguments
 parser.add_argument("-bt", "--bart", help="true if bart else false, default False", type=bool, default=False, action="store")
-parser.add_argument("-mi", "--max_length_input", help="max length of input sequence, default 256", type=int, default=256, action="store")
+parser.add_argument("-t5", "--t5", help='true if t5 else false, default False', type=bool, default=True, action="store")
+parser.add_argument("-tk", "--tokenizer", help="name or path of where to find the tokenizer", type=str, default="", action="store")
+parser.add_argument("-mi", "--max_length_input", help="max length of input sequence, default 256", type=int, default=512, action="store")
 parser.add_argument("-mo", "--max_length_output", help="max_length of output sequence, defaut 21", type=int, default=21, action="store")
 parser.add_argument("-ck", "--checkpoint", help="directory where to find the checkpoint of the model, default None", type=str, default=None, action='store')
 parser.add_argument("-bs", "--batch_size", help="batch size for training, default 16", type=int, default=16, action='store')
@@ -91,7 +102,10 @@ if __name__ == "__main__":
         if args.bart:
             config = BartConfig.from_json_file(args.checkpoint + "/config.json")
             model = BartForConditionalGeneration.from_pretrained(args.checkpoint + "/pytorch_model.bin", config=config)
-        else:
+        if args.t5:
+            config = T5Config.from_json_file(args.checkpoint + "/config.json")
+            model = T5ForConditionalGeneration.from_pretrained(args.checkpoint + "/pytorch_model.bin", config=config)
+        elif not args.bart and not args.t5:
             config = EncoderDecoderConfig.from_json_file(args.checkpoint + "/config.json")
             model = EncoderDecoderModel.from_pretrained(args.checkpoint + "/pytorch_model.bin", config=config)
 
@@ -102,7 +116,15 @@ if __name__ == "__main__":
         if not model_created:
             model = BartForConditionalGeneration.from_pretrained(model_name)
             model_created = True
-    else:
+
+    if args.t5:
+        model_name = "airKlizz/t5-base-multi-fr-wiki-news"
+        if args.tokenizer != "":
+            tokenizer = T5Tokenizer.from_pretrained(args.tokenizer)
+        else:
+            print("Please provide a correct tokenizer for T5.")
+
+    elif not args.bart and not args.t5:
         model_name = "camembert-base"
         # config = CamembertConfig.from_pretrained(model_name)
         tokenizer = CamembertTokenizer.from_pretrained(model_name, do_lower_case=True)
@@ -119,15 +141,6 @@ if __name__ == "__main__":
     answers = df_generation["answer_span"]
     sentences = df_generation["context"]
 
-    generation_dataset = load_examples_question_generation(
-        answers=answers,
-        sentences=sentences,
-        tokenizer=tokenizer,
-        max_length_seq=max_length_seq,
-        max_length_label=max_length_label,
-        bart=args.bart,
-        )
-
     generation_hyperparameters = {
         'min_length': 5,
         'max_length': max_length_label,
@@ -138,24 +151,47 @@ if __name__ == "__main__":
         'decoder_start_token_id': tokenizer.cls_token_id,
         'bos_token_id': tokenizer.cls_token_id,
         'pad_token_id': tokenizer.pad_token_id,
-        'eos_token_id': tokenizer.convert_tokens_to_ids("?"),
     }
-    results = generate_questions(
-        model=model,
-        dataset=generation_dataset,
-        tokenizer=tokenizer,
-        device=device,
-        batch_size=args.batch_size,
-        generation_hyperparameters=generation_hyperparameters,
-    )
 
-    generated_questions = []
-    for batch in results:
-        for question in batch:
-            generated_questions.append(question)
+    if not args.t5:
+        generation_dataset = load_examples_question_generation(
+            answers=answers,
+            sentences=sentences,
+            tokenizer=tokenizer,
+            max_length_seq=max_length_seq,
+            max_length_label=max_length_label,
+            bart=args.bart,
+            )
+
+        results = generate_questions(
+            model=model,
+            dataset=generation_dataset,
+            tokenizer=tokenizer,
+            device=device,
+            batch_size=args.batch_size,
+            generation_hyperparameters=generation_hyperparameters,
+        )
+
+        generated_questions = []
+        for batch in results:
+            for question in batch:
+                generated_questions.append(question)
+
+    else:
+        nb_batch = len(sentences)//args.batch_size
+        generated_questions = []
+        for i in range(nb_batch-1):
+            batch_contexts = sentences[i*args.batch_size:(i+1)*args.batch_size]
+            batch_answers = answers[i*args.batch_size:(i+1)*args.batch_size]
+            batch_hl_contexts = highlight_answers(batch_answers, batch_contexts, "<hl>", "generate question: ")
+            list_inputs = tokenizer.batch_encode_plus(batch_hl_contexts, padding=True)
+            input_ids = torch.tensor(list_inputs["input_ids"])
+            input_ids = input_ids.to(device)
+            batch_generated_tokens = model.generate(input_ids=input_ids)
+            batch_generated_questions = tokenizer.batch_decode(batch_generated_tokens)
+            generated_questions += batch_generated_questions
 
     df_generation["question"] = generated_questions
-    df_generation["id"]
 
     # SAVING
     if not os.path.exists(args.output_dir):
