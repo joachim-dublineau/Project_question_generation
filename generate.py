@@ -180,11 +180,15 @@ if __name__ == "__main__":
     else:
         nb_batch = len(sentences)//args.batch_size
         generated_questions = []
-        for i in range(nb_batch-1):
-            batch_contexts = sentences[i*args.batch_size:(i+1)*args.batch_size]
-            batch_answers = answers[i*args.batch_size:(i+1)*args.batch_size]
+        list_answers = answers.tolist()
+        list_contexts = sentences.tolist()
+        for i in range(nb_batch):
+            batch_contexts = list_contexts[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
+                list_contexts[i*args.batch_size:]
+            batch_answers = list_answers[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
+                list_answers[i * args.batch_size:]
             batch_hl_contexts = highlight_answers(batch_answers, batch_contexts, "<hl>", "generate question: ")
-            list_inputs = tokenizer.batch_encode_plus(batch_hl_contexts, padding=True)
+            list_inputs = tokenizer.batch_encode_plus(batch_hl_contexts, padding=True, max_length=max_length_seq)
             input_ids = torch.tensor(list_inputs["input_ids"])
             input_ids = input_ids.to(device)
             batch_generated_tokens = model.generate(input_ids=input_ids)

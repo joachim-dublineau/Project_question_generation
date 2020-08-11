@@ -17,7 +17,7 @@ from collections import OrderedDict
 import numpy as np
 from spacy.tokenizer import Tokenizer
 from spacy.util import compile_prefix_regex, compile_infix_regex, compile_suffix_regex
-
+import difflib
 
 
 # UTILS FOR LOADING
@@ -622,6 +622,28 @@ def highlight_answers(answers, contexts, token, optional_string_to_add):
         if index != -1:
             highlighted_context = context[:index] + " " + token + " " + answer + " " + token + " " + context[index + len(answer):]
             highlighted_contexts.append(optional_string_to_add + highlighted_context)
+        else:
+            answer_bis = re.sub("  ", " ", answer)
+            context_bis = re.sub("[-(,).;:<>']", " ", context)
+            context_bis = re.sub(" x ", " ", context_bis)
+            context_bis = re.sub("  ", " ", context_bis)
+            index = context_bis.find(answer_bis)
+            if index != -1:
+                highlighted_context = context[:index] + " " + token + " " + answer_bis + " " + token + " " + context[
+                                                                                                         index + len(
+                                                                                                             answer):]
+                highlighted_contexts.append(optional_string_to_add + highlighted_context)
+            else:
+                tokenized = answer_bis.split(' ')
+                index = context.find(tokenized[0])
+                index_end = context.find(tokenized[-1]) + len(tokenized[-1])
+                if index != -1 and index_end != -1:
+                    highlighted_context = context[:index] + " " + token + " " + context[index:index_end] + " " + token + \
+                                          " " + context[index_end:]
+                    highlighted_contexts.append(optional_string_to_add + highlighted_context)
+                else:
+                    print(answer, context)
+
     return highlighted_contexts
 
 
