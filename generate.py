@@ -81,7 +81,6 @@ if __name__ == "__main__":
     df_generation = data_prep.df_cleaned_scenario
     df_generation = df_generation.drop(columns=["questions", 'title', 'index'])
     print("Done. {:.2f}s".format(time.time() - t0))
-    print(df_generation.head())
 
      # EXTRACTING KEYWORDS
     nlp = spacy.load("fr_core_news_sm")
