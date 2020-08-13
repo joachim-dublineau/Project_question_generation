@@ -90,6 +90,7 @@ if __name__ == "__main__":
     df_generation = select_keywords_spacy(df_generation, "context", 5, nlp)
     df_generation = separating_keywords(df_generation, "keywords")
     print("Done. {:.2f}s".format(time.time() - t0))
+    t0 = time.time()
 
     # LOADING MODEL
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -200,5 +201,5 @@ if __name__ == "__main__":
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     df_generation.to_csv(args.output_dir + "/" + args.file_name, sep=",")
-    print("Generated.")
+    print("Generated. {:.2f}s".format(time.time() - t0))
 
