@@ -189,9 +189,11 @@ if __name__ == "__main__":
                 list_answers[i * args.batch_size:]
             batch_hl_contexts = highlight_answers(batch_answers, batch_contexts, "<hl>", "generate question: ")
             list_inputs = tokenizer.batch_encode_plus(batch_hl_contexts, padding=True, max_length=max_length_seq)
-            input_ids = torch.tensor(list_inputs["input_ids"])
-            input_ids = input_ids.to(device)
-            batch_generated_tokens = model.generate(input_ids=input_ids)
+            input_ids = torch.tensor(list_inputs["input_ids"]).to(device)
+            attention_mask = torch.tensor(list_inputs["attention_mask"]).to(device)
+            generation_hyperparameters["input_ids"] = input_ids
+            generation_hyperparameters["attention_mask"] = attention_mask
+            batch_generated_tokens = model.generate(**generation_hyperparameters)
             batch_generated_questions = tokenizer.batch_decode(batch_generated_tokens)
             generated_questions += batch_generated_questions
 
