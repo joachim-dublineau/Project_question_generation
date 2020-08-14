@@ -73,7 +73,6 @@ if __name__ == "__main__":
     file_data = args.file_data
     #working_directory = os.getcwd().split("/")[:-1]
     #working_directory = "/".join(working_directory)
-    #params = {'scenario_file': working_directory + "/data-anna/scenario_natixis_prod.json"}
     params = {'scenario_file': file_data}
     data_prep = DataPrepModelAssess(**params)
     df_generation = clean_dataframe(data_prep.df_scenario, "context")
