@@ -642,7 +642,14 @@ def highlight_answers(answers, contexts, token, optional_string_to_add):
                                           " " + context[index_end:]
                     highlighted_contexts.append(optional_string_to_add + highlighted_context)
                 else:
-                    print(answer, context)
+                    index = context.lower().find(tokenized[0].lower())
+                    index_end = context.lower().find(tokenized[-1].lower()) + len(tokenized[-1])
+                    if index != -1 and index_end != -1:
+                        highlighted_context = context[:index] + " " + token + " " + context[index:index_end] + " " + token + \
+                                          " " + context[index_end:]
+                        highlighted_contexts.append(optional_string_to_add + highlighted_context)
+                    else:
+                        print(answer, context)
 
     return highlighted_contexts
 
