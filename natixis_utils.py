@@ -68,7 +68,7 @@ class DataPrepModelAssess:
         res_list = [x for x in res_list if x]
         return res_list
 
-    def is_valid_elt(d):
+    def is_valid_elt(self, d):
         name = d.get('name', '')
         if d.get('details', ''):
             details = d.get('details', '')
@@ -91,15 +91,15 @@ class DataPrepModelAssess:
 
         # If we don't give a dict, it means that it is the formated_scenario
         if not _scenario_dict:
-            if self.formated_scenario:
-                _scenario_dict = self.formated_scenario
+            if self.df_cleaned_scenario:
+                _scenario_dict = self.df_cleaned_scenario
 
         intents_list = _scenario_dict.get('intents')
         rows_list = []
 
         for intent in intents_list:
             # Excluding non valid intent (smalltalk / push) if flag is on
-            if not only_valid_intents or self.is_valid_elt(intent):
+            if not only_valid_intents or is_valid_elt(intent):
                 answers_content = intent.get('details', {}).get('answers', [])
                 answers_list = self.parse_answers_content(answers_content)
                 row_dict = {'id': intent.get('id'),
