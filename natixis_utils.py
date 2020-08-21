@@ -9,7 +9,7 @@
 # Zelros A.I.
 
 # IMPORTS
-import re
+import regex as re
 import json
 import pandas as pd
 from spacy.lang.fr.stop_words import STOP_WORDS
@@ -18,6 +18,7 @@ import numpy as np
 from spacy.tokenizer import Tokenizer
 from spacy.util import compile_prefix_regex, compile_infix_regex, compile_suffix_regex
 import difflib
+import copy
 
 
 # UTILS FOR LOADING
@@ -31,11 +32,9 @@ class DataPrepModelAssess:
             self.scenario_dict = json.load(json_data)
 
         self.df_scenario = self.get_dataframe_from_scenario_dict(self.scenario_dict)
-        self.df_cleaned_scenario = self.get_cleaned_dataframe()
 
     def set_df_scenario(self, df_data):
         self.df_scenario = df_data
-        self.df_cleaned_scenario = self.get_cleaned_dataframe()
 
     def parse_answers_content(self, answers_content: list) -> list:
         """
@@ -99,7 +98,7 @@ class DataPrepModelAssess:
 
         for intent in intents_list:
             # Excluding non valid intent (smalltalk / push) if flag is on
-            if not only_valid_intents or is_valid_elt(intent):
+            if not only_valid_intents or self.is_valid_elt(intent):
                 answers_content = intent.get('details', {}).get('answers', [])
                 answers_list = self.parse_answers_content(answers_content)
                 row_dict = {'id': intent.get('id'),
@@ -113,16 +112,6 @@ class DataPrepModelAssess:
 
         return df_scenario.loc[df_scenario['name'] != 'home', :].reset_index()  # WHY DID WE REMOVED 'home'?
 
-    def get_cleaned_dataframe(self):
-        '''
-        Clean the previous dataframe using clean_strings for sentences and rm_BP_CE(clean_string)
-        for answer
-        '''
-        df_cleaned_scenario = self.df_scenario.copy()
-        df_cleaned_scenario['questions'] = df_cleaned_scenario['questions'].apply(lambda x: clean_strings(x))
-        df_cleaned_scenario['context'] = df_cleaned_scenario['context'].apply(lambda x: rm_BP_CE(clean_string(x)))
-        return df_cleaned_scenario
-
     def delete_intents_with_not_enough_utterances(self, nb_utterances):
         '''
         This function makes sure that the dataframe only contains intents with
@@ -133,59 +122,70 @@ class DataPrepModelAssess:
             if len(sentences) < nb_utterances:
                 index = self.df_scenario[self.df_scenario['index'] == row[1]["index"]].index.values.astype(int)[0]
                 self.df_scenario = self.df_scenario.drop(index)
-        self.df_scenario = self.df_scenario.reset_index()
-        self.df_cleaned_scenario = self.get_cleaned_dataframe()
+        self.df_scenario = self.df_scenario.reset_index()()
         return None
 
-def clean_string(string=None):
-    if isinstance(string, str):
-        # capital letter to low ones
-        cleaned_string = string.lower()
-        # Replacing '_' by ' '
-        cleaned_string = cleaned_string.replace('_', ' ')
-        # Removing double spaces
-        cleaned_string = re.sub(r'\s+', ' ', cleaned_string)
-        cleaned_string = cleaned_string.strip()
-        str_res = cleaned_string
-    else:
-        str_res = None
-    return str_res
-
-
-def clean_strings(strings):
-    if isinstance(strings, list):
-        res = [clean_string(s) for s in strings]
-    else:
-        res = clean_string(strings)
-    return res
-
-
-def rm_BP_CE(string):
-    string = re.sub(r'^bp ce ', '', string)
-    string = re.sub(r'^bp ', '', string)
-    string = re.sub(r'^ce ', '', string)
-    return string
-
-
-def clean_dataframe(df_data, channel):
+def clean_dataframe(df_, channel):
     """
     This function is used to remove hyperlinks and
     'Date de dernière mise à jour'
     """
+    df_data = df_.copy(deep=True)
     nb_rows = df_data.shape[0]
-    for i in range(nb_rows):
-        row = df_data.loc[i, channel]
-        row = re.sub(r'<.+?>', '', row)  # remove hyperlinks
+    for k in range(nb_rows):
+        row = copy.deepcopy(df_data.loc[k, channel])
+        row = re.sub(r'<.+?>', ' cliquer sur le lien.', row)  # remove hyperlinks
         row = re.sub(r'\*.+?\*', '', row)  # remove BP&CE
+        row = re.sub("_", " ", row)
+        row = re.sub("\*", "", row)
+        row = re.sub(" BP&CE ", " ", row)
+        row = re.sub(" BP ", " ", row)
+        row = re.sub(" CE ", " ", row)
+        row = re.sub("- ", ' - ', row)
+        row = re.sub(" -", ' - ', row)
+        row = re.sub(r'\s+', ' ', row) # remove double spaces
+        row = row.strip()
         index = row.find("Dernière mise à jour le")
         if index != -1:
             row = row[:index]
-        index = row.find("Date de")
-        if index != -1:
-            row = row[:index]
-        df_data.loc[i, channel] = row
+        index = list(find_all(row, "Date de"))
+        if len(index) > 0:
+            row = row[:index[-1]]
+        # Dealing with listings:
+        indexes = list(find_all(row, ': - '))
+        new_row = copy.deepcopy(row)
+        try:
+            if len(indexes) > 0:
+                new_row = row[:indexes[0]] + ": "
+                for i, index in enumerate(indexes):
+                    listing = row[index: (indexes[i+1]-1 if i<len(indexes)-1 else -1)]
+                    indexes_of_listing = list(find_all(listing, ' - '))
+                    join_with = ","
+                    for j, index_of_listing in enumerate(indexes_of_listing[:-1]):
+                        item = listing[index_of_listing: (indexes_of_listing[j+1]-1 if j<len(indexes_of_listing)-1 else -1)]
+                        if "," in item:
+                            join_with = ";"
+                        if "." in item or ";" in item:
+                            join_with = "."
+                    new_str = ""
+                    for j, index_of_listing in enumerate(indexes_of_listing):
+                        new_str += (listing[index_of_listing + 3].upper() if join_with == "." else listing[index_of_listing + 3].lower()) + \
+                            listing[index_of_listing + 4: (indexes_of_listing[j+1] - (1 if listing[indexes_of_listing[j+1]-1] in [",", ";", "."] else 0) if j<len(indexes_of_listing)-1 else -1)] + \
+                            (join_with + " " if j !=len(indexes_of_listing)-1 else "")
+                    new_row += new_str + listing[-1] + (": " if i!=len(indexes)-1 else row[-1])
+        except:
+            print("Issue with preprocessing of", k)
+            new_row = row
+        df_data.loc[k, channel] = new_row
     return df_data
 
+def find_all(a_str, sub):
+    start = 0
+    while True:
+        start = a_str.find(sub, start)
+        if start == -1: return
+        yield start
+        start += len(sub) # use start += 1 to find overlapping matches
 
 def remove_useless_words(list_str, list_useless):
     '''

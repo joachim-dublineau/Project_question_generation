@@ -20,6 +20,7 @@ random.seed(2020)
 import os
 import regex as re
 import torch
+import tqdm
 
 from transformers import (
     BertConfig,
@@ -55,14 +56,13 @@ import json
 
 parser = argparse.ArgumentParser()
 # Compulsory arguments
-parser.add_argument("file_data", help="name of the file containing the contexts", type=str)
+parser.add_argument("file_data", help="name of the json file containing the contexts", type=str)
 parser.add_argument("output_dir", help="name of the directory where to export the generated questions", type=str)
-parser.add_argument("file_name", help="name of the json file that will be saved", type=str)
+parser.add_argument("file_name", help="name of the output json file that will be saved", type=str)
 parser.add_argument("preprocessing", help="ae (answer extraction if model allows) or ke (keyword extraction with spacy)", choices={"ae", "ke"}, type=str)
 parser.add_argument("is_fquad", help="boolean saying if the file is an fquad json file or not.", type=bool)
 
 # Optional arguments
-parser.add_argument("-")
 parser.add_argument("-bt", "--bart", help="true if bart else false, default False", type=bool, default=False, action="store")
 parser.add_argument("-t5", "--t5", help='true if t5 else false, default False', type=bool, default=True, action="store")
 parser.add_argument("-t5tp", "--t5_type", help="Type of T5 model: multi or e2e, default multi", choices={"multi", "e2e"}, default="multi", action="store")
@@ -130,13 +130,18 @@ if __name__ == "__main__":
     print("Loading and preprocessing data...", end="", flush=True)
     t0 = time.time()
     if args.preprocessing == "ke":
-        file_data = args.file_data
-        params = {'scenario_file': file_data}
-        data_prep = DataPrepModelAssess(**params)
-        df_generation = clean_dataframe(data_prep.df_scenario, "context")
-        data_prep.set_df_scenario(df_generation)
-        df_generation = data_prep.df_cleaned_scenario
-        df_generation = df_generation.drop(columns=["questions", 'title', 'index'])
+        if args.is_fquad == False:
+            file_data = args.file_data
+            params = {'scenario_file': file_data}
+            data_prep = DataPrepModelAssess(**params)
+            df_generation = clean_dataframe(data_prep.df_scenario, "context")
+            data_prep.set_df_scenario(df_generation)
+            df_generation = data_prep.df_cleaned_scenario
+            df_generation = df_generation.drop(columns=["questions", 'title', 'index'])
+
+        else:
+            df_generation = load_json_QuAD_v1(args.file_data)
+            df_generation = df_generation.drop(columns=["question"]) 
 
         # EXTRACTING KEYWORDS
         nlp = spacy.load("fr_core_news_sm")
@@ -145,9 +150,10 @@ if __name__ == "__main__":
         df_generation = separating_keywords(df_generation, "keywords") # df_generation columns=["id", "answer_span", "context"]
         
     else:
-        print("ATTENTION: The model the will preprocess the data should be trained on answer extraction task.")
+        print()
+        print("ATTENTION: The model will preprocess the data should be trained on answer extraction task.")
         if args.is_fquad == True:
-            df_generation = load_json_QuAD_v1(args.file_name)
+            df_generation = load_json_QuAD_v1(args.file_data)
             df_generation = df_generation.drop(columns=["question"]) 
             if args.t5_type == "e2e":
                 prev_context = df_generation.iloc[0]["context"]
@@ -184,8 +190,8 @@ if __name__ == "__main__":
                                         sentences[i] + ". <hl> " + ". ".join(sentences[i+1:]) + \
                                         ("." if i != len(sentences)-1 else ''))
                 inputs = tokenizer.batch_encode_plus(inputs_model, max_length= 512, truncation=True)
-                input_ids = torch.Tensor(inputs["input_ids"]).to(device)
-                attention_mask = torch.Tensor(inputs["attention_mask"]).to(device)
+                input_ids = torch.tensor(inputs["input_ids"]).to(device)
+                attention_mask = torch.tensor(inputs["attention_mask"]).to(device)
                 outputs = model.generate(input_ids = input_ids, attention_mask = attention_mask)
                 spans = tokenizer.batch_decode(outputs)
                 for i in range(len(spans)):
@@ -196,6 +202,7 @@ if __name__ == "__main__":
     t0 = time.time()
 
     # GENERATION
+    print("Generating...", end="", flush=True)
     max_length_seq = args.max_length_input
     max_length_label = args.max_length_output
 
@@ -209,9 +216,6 @@ if __name__ == "__main__":
         'length_penalty': args.length_penalty,
         'num_beams': args.num_beams,
         'temperature': args.temperature,
-        'decoder_start_token_id': tokenizer.cls_token_id,
-        'bos_token_id': tokenizer.cls_token_id,
-        'pad_token_id': tokenizer.pad_token_id,
     }
 
     def add_string(contexts, string):
@@ -250,7 +254,7 @@ if __name__ == "__main__":
         list_answers = answers.tolist()
         list_contexts = sentences.tolist()
         store_e2e_questions ={}
-        for i in range(nb_batch):
+        for i in tqdm.tqdm(range(nb_batch)):
             if args.t5_type == "multi":
                 batch_contexts = list_contexts[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
                     list_contexts[i*args.batch_size:]
@@ -261,9 +265,10 @@ if __name__ == "__main__":
                 batch_contexts = contexts[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
                     contexts[i*args.batch_size:]
                 batch_hl_contexts = add_string(batch_contexts, "generate questions: ")
+            
             list_inputs = tokenizer.batch_encode_plus(batch_hl_contexts, padding=True, max_length=max_length_seq)
-            input_ids = torch.Tensor(list_inputs["input_ids"]).to(device)
-            attention_mask = torch.Tensor(list_inputs["attention_mask"]).to(device)
+            input_ids = torch.tensor(list_inputs["input_ids"], ).to(device)
+            attention_mask = torch.tensor(list_inputs["attention_mask"]).to(device)
             generation_hyperparameters["input_ids"] = input_ids
             generation_hyperparameters["attention_mask"] = attention_mask
             batch_generated_tokens = model.generate(**generation_hyperparameters)
@@ -274,9 +279,15 @@ if __name__ == "__main__":
                     batch_generated_questions[j] = generated
             generated_questions += batch_generated_questions
 
-    if args.t5_type != "e2e" and args.is_fquad != True:
+    if args.t5_type != "e2e" or args.is_fquad != True:
         df_generation["question"] = generated_questions
     print("Generated. {:.2f}s".format(time.time() - t0))
+
+    if args.is_fquad: 
+        idx_examples_eval = [1030, 649, 813, 3149] if args.t5_type == "multi" else [164, 207, 257, 760]
+        print("Few samples:")
+        for index in idx_examples_eval:  
+            print(generated_questions[index])
 
     # SAVING
     dict_to_save = {}
