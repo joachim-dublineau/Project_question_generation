@@ -12,3 +12,5 @@ translate_squad.ipynb
 .ipynb_checkpoints/test_natixis-checkpoint.ipynb
 test_natixis.ipynb
 *.pyc
+*.csv
+*.xlsx

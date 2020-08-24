@@ -132,7 +132,7 @@ def clean_dataframe(df_, channel):
     """
     df_data = df_.copy(deep=True)
     nb_rows = df_data.shape[0]
-    for k in range(nb_rows):
+    for k in range(nb_rows):            
         row = copy.deepcopy(df_data.loc[k, channel])
         row = re.sub(r'<.+?>', ' cliquer sur le lien.', row)  # remove hyperlinks
         row = re.sub(r'\*.+?\*', '', row)  # remove BP&CE
@@ -145,12 +145,16 @@ def clean_dataframe(df_, channel):
         row = re.sub(" -", ' - ', row)
         row = re.sub(r'\s+', ' ', row) # remove double spaces
         row = row.strip()
+        row = re.sub(r"^- ", "", row)
+        row = re.sub("•", "-", row)
+        row = re.sub("►", "-", row)
         index = row.find("Dernière mise à jour le")
         if index != -1:
             row = row[:index]
         index = list(find_all(row, "Date de"))
         if len(index) > 0:
             row = row[:index[-1]]
+
         # Dealing with listings:
         indexes = list(find_all(row, ': - '))
         new_row = copy.deepcopy(row)

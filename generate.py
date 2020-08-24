@@ -135,8 +135,6 @@ if __name__ == "__main__":
             params = {'scenario_file': file_data}
             data_prep = DataPrepModelAssess(**params)
             df_generation = clean_dataframe(data_prep.df_scenario, "context")
-            data_prep.set_df_scenario(df_generation)
-            df_generation = data_prep.df_cleaned_scenario
             df_generation = df_generation.drop(columns=["questions", 'title', 'index'])
 
         else:
@@ -167,8 +165,6 @@ if __name__ == "__main__":
             params = {'scenario_file': file_data}
             data_prep = DataPrepModelAssess(**params)
             df_generation = clean_dataframe(data_prep.df_scenario, "context")
-            data_prep.set_df_scenario(df_generation)
-            df_generation = data_prep.df_cleaned_scenario
             df_generation = df_generation.drop(columns=["questions", 'title', 'index'])
 
             # EXTRACTING ANSWERS
