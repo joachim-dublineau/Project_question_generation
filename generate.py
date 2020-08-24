@@ -186,14 +186,13 @@ if __name__ == "__main__":
                 df_generation["answer_span"] = answers_span 
 
     if args.t5_type == "e2e":    
-        prev_context = df_generation.iloc[0]["context"]
+        prev_context = df_generation.loc[0, "context"]
         contexts = [prev_context]
         for iterrow in df_generation.iterrows():
             row = iterrow[1]
             if row["context"] != prev_context:
                 contexts.append(row["context"])
                 prev_context = row["context"]
-            
     print("Done. {:.2f}s".format(time.time() - t0))
     t0 = time.time()
 

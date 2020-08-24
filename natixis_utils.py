@@ -109,7 +109,29 @@ class DataPrepModelAssess:
                 rows_list.append(row_dict)
 
         df_scenario = pd.DataFrame(rows_list, columns=["id", 'name', 'title', 'questions', 'context'])
-
+        prev_context = df_scenario.loc[0, "context"]
+        prev_questions = df_scenario.loc[0, 'questions']
+        contexts = [prev_context]
+        to_drop = []
+        questions = [prev_questions]
+        for i, iterrow in enumerate(df_scenario.iterrows()):
+            row = iterrow[1]
+            if row["context"] != prev_context:
+                contexts.append(row["context"])
+                prev_context = row["context"]
+                prev_questions = row["questions"]
+                contexts.append(prev_context)
+                questions.append(prev_questions)
+            elif i != 0:
+                questions[-1] = questions[-1] + row["questions"]
+                to_drop.append(i)
+        print(to_drop)
+        print(df_scenario)
+        df_scenario = df_scenario.drop(to_drop, axis = 0)
+        print(df_scenario)
+        print(len(questions))
+        df_scenario["questions"] = questions
+        
         return df_scenario.loc[df_scenario['name'] != 'home', :].reset_index()  # WHY DID WE REMOVED 'home'?
 
     def delete_intents_with_not_enough_utterances(self, nb_utterances):
