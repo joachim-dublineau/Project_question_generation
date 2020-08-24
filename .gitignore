@@ -14,3 +14,4 @@ test_natixis.ipynb
 *.pyc
 *.csv
 *.xlsx
+temp.py
