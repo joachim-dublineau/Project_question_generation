@@ -250,7 +250,6 @@ if __name__ == "__main__":
 
         if args.t5_type == "multi": list_answers = answers.tolist()
         list_contexts = sentences.tolist()
-        store_e2e_questions ={}
         for i in tqdm.tqdm(range(nb_batch)):
             if args.t5_type == "multi":
                 batch_contexts = list_contexts[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
@@ -262,19 +261,19 @@ if __name__ == "__main__":
                 batch_contexts = contexts[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
                     contexts[i*args.batch_size:]
                 batch_hl_contexts = add_string(batch_contexts, "generate questions: ")
-            
-            list_inputs = tokenizer.batch_encode_plus(batch_hl_contexts, padding=True, max_length=max_length_seq)
-            input_ids = torch.tensor(list_inputs["input_ids"], ).to(device)
-            attention_mask = torch.tensor(list_inputs["attention_mask"]).to(device)
-            generation_hyperparameters["input_ids"] = input_ids
-            generation_hyperparameters["attention_mask"] = attention_mask
-            batch_generated_tokens = model.generate(**generation_hyperparameters)
-            batch_generated_questions = tokenizer.batch_decode(batch_generated_tokens)
-            if args.t5_type == "e2e":
-                for j in range(len(batch_generated_questions)):
-                    generated = re.split("<[^<]*>", batch_generated_questions[j])[:-1]
-                    batch_generated_questions[j] = generated
-            generated_questions += batch_generated_questions
+            if len(batch_hl_contexts) > 0 :
+                list_inputs = tokenizer.batch_encode_plus(batch_hl_contexts, padding=True, max_length=max_length_seq, truncation=True)
+                input_ids = torch.tensor(list_inputs["input_ids"], ).to(device)
+                attention_mask = torch.tensor(list_inputs["attention_mask"]).to(device)
+                generation_hyperparameters["input_ids"] = input_ids
+                generation_hyperparameters["attention_mask"] = attention_mask
+                batch_generated_tokens = model.generate(**generation_hyperparameters)
+                batch_generated_questions = tokenizer.batch_decode(batch_generated_tokens)
+                if args.t5_type == "e2e":
+                    for j in range(len(batch_generated_questions)):
+                        generated = re.split("<[^<]*>", batch_generated_questions[j])[:-1]
+                        batch_generated_questions[j] = generated
+                generated_questions += batch_generated_questions
 
     if args.t5_type != "e2e" or args.is_fquad != True:
         df_generation["question"] = generated_questions
