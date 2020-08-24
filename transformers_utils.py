@@ -714,7 +714,7 @@ def load_json_QuAD_v1(file_name):
     contexts_list = []
     doc_titles_list = []
 
-    with open(file_name) as json_file:
+    with open(file_name, encoding="utf-8") as json_file:
         train_file = json.load(json_file)
         for data in train_file['data']:
             for id_paragraph, paragraph in enumerate(data['paragraphs']):

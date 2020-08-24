@@ -59,13 +59,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument("file_data", help="name of the json file containing the contexts", type=str)
 parser.add_argument("output_dir", help="name of the directory where to export the generated questions", type=str)
 parser.add_argument("file_name", help="name of the output json file that will be saved", type=str)
-parser.add_argument("preprocessing", help="ae (answer extraction if model allows) or ke (keyword extraction with spacy)", choices={"ae", "ke"}, type=str)
-parser.add_argument("is_fquad", help="boolean saying if the file is an fquad json file or not.", type=bool)
 
 # Optional arguments
+parser.add_argument("-fq", "--is_fquad", help="boolean saying if the file is an fquad json file or not, default False", type=bool, default=False, action="store")
 parser.add_argument("-bt", "--bart", help="true if bart else false, default False", type=bool, default=False, action="store")
 parser.add_argument("-t5", "--t5", help='true if t5 else false, default False', type=bool, default=True, action="store")
-parser.add_argument("-t5tp", "--t5_type", help="Type of T5 model: multi or e2e, default multi", choices={"multi", "e2e"}, default="multi", action="store")
+parser.add_argument("-t5tp", "--t5_type", help="type of T5 model: multi or e2e, default multi", choices={"multi", "e2e"}, default="multi", action="store")
+parser.add_argument("-pr", "--preprocessing", help="ae (answer extraction if model allows) or ke (keyword extraction with spacy), default ae", type=str, default="ae", choices={"ae", "ke"})
 parser.add_argument("-rf", "--ref_file", help='file to use for non fquad type of dataset as a reference. .json', type=str, action="store")
 parser.add_argument("-tk", "--tokenizer", help="name or path of where to find the tokenizer", type=str, default="", action="store")
 parser.add_argument("-mi", "--max_length_input", help="max length of input sequence, default 256", type=int, default=512, action="store")
@@ -76,15 +76,18 @@ parser.add_argument("-rp", "--repetition_penalty", help='repetition penalty para
 parser.add_argument("-lp", "--length_penalty", help='length penalty parameter for generation, default 2', type=float, default=2.0, action="store")
 parser.add_argument("-nb", "--num_beams", help="number of beams, parameter for generation, default 1", type=int, default=1, action="store")
 parser.add_argument("-tp", "--temperature", help="temperature parameter for softmax in generation, default 1.0", type=float, default=1.0, action="store")
+parser.add_argument("-csv", "--to_csv", help= "if the generated sentences need to be saved as csv (sep=_, encoding utf-8), default False", type=bool, default=False, action="store")
 
 args = parser.parse_args()
 
 if __name__ == "__main__":
     # LOADING MODEL & TOKENIZER:
+    print(args)
     if args.t5_type == "e2e" and args.is_fquad == True:
         print("WARNING: e2e is meant to generate questions by context. The ouput of the script will be a csv instead of a json.") 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Device:", device)
+
     model_created = False
     print("Loading model and tokenizer...", end="", flush=True)
     if args.checkpoint != None:
@@ -98,6 +101,7 @@ if __name__ == "__main__":
         elif not args.bart and not args.t5:
             config = EncoderDecoderConfig.from_json_file(args.checkpoint + "/config.json")
             model = EncoderDecoderModel.from_pretrained(args.checkpoint + "/pytorch_model.bin", config=config)
+        model_name = args.checkpoint
 
     if args.bart:
         model_name = "WikinewsSum/bart-large-multi-fr-wiki-news"
@@ -108,7 +112,8 @@ if __name__ == "__main__":
             model_created = True
 
     if args.t5:
-        model_name = "airKlizz/t5-base-multi-fr-wiki-news"
+        if args.checkpoint != None:
+            model_name = "airKlizz/t5-base-multi-fr-wiki-news"
         if args.tokenizer != "":
             tokenizer = T5Tokenizer.from_pretrained(args.tokenizer)
         else:
@@ -125,75 +130,70 @@ if __name__ == "__main__":
 
     model.to(device)
 
-
     # LOADING & PREPROCESSING DATA
     print("Loading and preprocessing data...", end="", flush=True)
     t0 = time.time()
-    if args.preprocessing == "ke":
-        if args.is_fquad == False:
-            file_data = args.file_data
-            params = {'scenario_file': file_data}
-            data_prep = DataPrepModelAssess(**params)
-            df_generation = clean_dataframe(data_prep.df_scenario, "context")
-            df_generation = df_generation.drop(columns=["questions", 'title', 'index'])
+    if args.is_fquad:
+        df_generation = load_json_QuAD_v1(args.file_data)
+        df_generation = df_generation.drop(columns=["question"])
 
-        else:
-            df_generation = load_json_QuAD_v1(args.file_data)
-            df_generation = df_generation.drop(columns=["question"]) 
-
-        # EXTRACTING KEYWORDS
-        nlp = spacy.load("fr_core_news_sm")
-        nlp.tokenizer = custom_tokenizer(nlp)
-        df_generation = select_keywords_spacy(df_generation, "context", 5, nlp)
-        df_generation = separating_keywords(df_generation, "keywords") # df_generation columns=["id", "answer_span", "context"]
-        
     else:
-        print()
-        print("ATTENTION: The model will preprocess the data should be trained on answer extraction task.")
-        if args.is_fquad == True:
-            df_generation = load_json_QuAD_v1(args.file_data)
-            df_generation = df_generation.drop(columns=["question"]) 
-            if args.t5_type == "e2e":
-                prev_context = df_generation.iloc[0]["context"]
-                contexts = [prev_context]
-                for iterrow in df_generation.iterrows():
-                    row = iterrow[1]
-                    if row["context"] != prev_context:
-                        contexts.append(row["context"])
-        else:
-            # PREPROCESSING NATIXIS CONTEXT
-            params = {'scenario_file': file_data}
-            data_prep = DataPrepModelAssess(**params)
-            df_generation = clean_dataframe(data_prep.df_scenario, "context")
-            df_generation = df_generation.drop(columns=["questions", 'title', 'index'])
+        # PREPROCESSING NATIXIS CONTEXT
+        file_data = args.file_data
+        params = {'scenario_file': file_data}
+        data_prep = DataPrepModelAssess(**params)
+        df_generation = clean_dataframe(data_prep.df_scenario, "context")
+        df_generation = df_generation.drop(columns=["questions", 'title', 'index'])
 
+        if args.preprocessing == "ke":
+            # EXTRACTING KEYWORDS
+            if args.t5_type == "multi":
+                nlp = spacy.load("fr_core_news_sm")
+                nlp.tokenizer = custom_tokenizer(nlp)
+                df_generation = select_keywords_spacy(df_generation, "context", 5, nlp)
+                df_generation = separating_keywords(df_generation, "keywords") # df_generation columns=["id", "answer_span", "context"]
+
+        else:
             # EXTRACTING ANSWERS
-            answers_span = []
-            for i, iterrow in enumerate(df_generation.iterrows()):
-                row = iterrow[1]
-                context = row["context"]
-                context = context[:-1]
-                df_generation.iloc[i].loc["context"] = context
-                try:
-                    sentences = context.split(".")
-                except:
-                    print('This context:', context[:50], "should contain at least a '.'")
-                    input_model = "extract answers: " + "<hl> " + context + " <hl>"
-                    continue
-                inputs_model = []
-                for i in range(0, len(sentences)):
-                    inputs_model.append("extract answers: " + ". ".join(sentences[:i]) + (". <hl> " if i != 0 else "<hl> ") + \
-                                        sentences[i] + ". <hl> " + ". ".join(sentences[i+1:]) + \
-                                        ("." if i != len(sentences)-1 else ''))
-                inputs = tokenizer.batch_encode_plus(inputs_model, max_length= 512, truncation=True)
-                input_ids = torch.tensor(inputs["input_ids"]).to(device)
-                attention_mask = torch.tensor(inputs["attention_mask"]).to(device)
-                outputs = model.generate(input_ids = input_ids, attention_mask = attention_mask)
-                spans = tokenizer.batch_decode(outputs)
-                for i in range(len(spans)):
-                    spans[i] = spans[i].replace("<sep>", "")
-                answers_span.append(spans)
-            df_generation["answer_span"] = answers_span 
+            print()
+            print("ATTENTION: The model should be trained on answer extraction task to preprocess the data.")            
+            if args.t5_type == "multi":
+                answers_span = []
+                for i, iterrow in enumerate(df_generation.iterrows()):
+                    row = iterrow[1]
+                    context = row["context"]
+                    context = context[:-1]
+                    df_generation.iloc[i].loc["context"] = context
+                    try:
+                        sentences = context.split(".")
+                    except:
+                        print('This context:', context[:50], "should contain at least a '.'")
+                        input_model = "extract answers: " + "<hl> " + context + " <hl>"
+                        continue
+                    inputs_model = []
+                    for i in range(0, len(sentences)):
+                        inputs_model.append("extract answers: " + ". ".join(sentences[:i]) + (". <hl> " if i != 0 else "<hl> ") + \
+                                            sentences[i] + ". <hl> " + ". ".join(sentences[i+1:]) + \
+                                            ("." if i != len(sentences)-1 else ''))
+                    inputs = tokenizer.batch_encode_plus(inputs_model, max_length= 512, truncation=True)
+                    input_ids = torch.tensor(inputs["input_ids"]).to(device)
+                    attention_mask = torch.tensor(inputs["attention_mask"]).to(device)
+                    outputs = model.generate(input_ids = input_ids, attention_mask = attention_mask)
+                    spans = tokenizer.batch_decode(outputs)
+                    for i in range(len(spans)):
+                        spans[i] = spans[i].replace("<sep>", "")
+                    answers_span.append(spans)
+                df_generation["answer_span"] = answers_span 
+
+    if args.t5_type == "e2e":    
+        prev_context = df_generation.iloc[0]["context"]
+        contexts = [prev_context]
+        for iterrow in df_generation.iterrows():
+            row = iterrow[1]
+            if row["context"] != prev_context:
+                contexts.append(row["context"])
+                prev_context = row["context"]
+            
     print("Done. {:.2f}s".format(time.time() - t0))
     t0 = time.time()
 
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     max_length_seq = args.max_length_input
     max_length_label = args.max_length_output
 
-    answers = df_generation["answer_span"]
+    if args.t5_type == "multi": answers = df_generation["answer_span"]
     sentences = df_generation["context"]
 
     generation_hyperparameters = {
@@ -245,9 +245,10 @@ if __name__ == "__main__":
                 generated_questions.append(question)
 
     else:  
-        nb_batch = len(sentences)//args.batch_size if args.t5_type == "multi" else len(contexts)
+        nb_batch = len(sentences)//args.batch_size if args.t5_type == "multi" else len(contexts)//args.batch_size + 1
         generated_questions = []
-        list_answers = answers.tolist()
+
+        if args.t5_type == "multi": list_answers = answers.tolist()
         list_contexts = sentences.tolist()
         store_e2e_questions ={}
         for i in tqdm.tqdm(range(nb_batch)):
@@ -289,14 +290,15 @@ if __name__ == "__main__":
     dict_to_save = {}
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
-    #df_generation.to_csv(args.output_dir + "/" + args.file_name, sep=",")
+    
+    if args.to_csv: df_generation.to_csv(os.path.join(args.output_dir, ".".join(args.file_name.split(".")[:-1] + ".csv")), sep="_", encoding="utf-8")
 
     if args.is_fquad and args.t5_type == "multi":
         data, paragraphs, qas = [], [], []
 
         dict_to_save['version'] = 1.1
-        prev_context = df_generation.iloc[0].loc["context"]
-        prev_title = df_generation.iloc[0].loc["doc_title"]
+        prev_context = df_generation.loc[0, "context"]
+        prev_title = df_generation.loc[0, "doc_title"]
         for i, iterrow in enumerate(df_generation.iterrows()):
             row = iterrow[1]
             
@@ -338,7 +340,7 @@ if __name__ == "__main__":
 
     elif args.t5_type == "e2e" and args.is_fquad:
         df_e2e = pd.DataFrame({"context": contexts, "questions": generated_questions})
-        df_e2e.to_csv(os.path.join(args.output_dir, args.file_name if file_name[-3:]=='csv' else ".".join(file_name.split(".")[:-1]) + ".csv"))
+        df_e2e.to_csv(os.path.join(args.output_dir, ".".join(args.file_name.split(".")[:-1] + ".csv")), sep="_", encoding="utf-8")
 
     elif args.is_fquad == False:
         # NATIXIS TO JSON (questions, context, name, id, tags, confidentiality)

@@ -526,9 +526,9 @@ def select_keywords_spacy(df_data, channel, n_keywords, nlp):
     OUTPUTS:
     - df_data_bis: copy of df_data but without the commas in sentences channel.
     '''
-    df_data_bis = df_data.copy()
+    df_data_bis = df_data.deepcopy()
     answers_spans = []
-    for i, row in enumerate(df_data.iterrows()):
+    for i, row in enumerate(df_data_bis.iterrows()):
         "Rechecker l'efficacité de ces fonctions de preprocessing."
         tr4w = TextRank4Keyword(nlp)
         row = row[-1][channel]
