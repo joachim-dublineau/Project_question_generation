@@ -108,31 +108,23 @@ class DataPrepModelAssess:
                             'context': str(' '.join(answers_list))}
                 rows_list.append(row_dict)
 
-        df_scenario = pd.DataFrame(rows_list, columns=["id", 'name', 'title', 'questions', 'context'])
-        prev_context = df_scenario.loc[0, "context"]
-        prev_questions = df_scenario.loc[0, 'questions']
-        contexts = [prev_context]
+        df_scenario = pd.DataFrame(rows_list, columns=["id", 'name', 'title', 'questions', 'context']).reset_index(drop=True)
+        prev_context = ""
         to_drop = []
-        questions = [prev_questions]
+        questions = []
         for i, iterrow in enumerate(df_scenario.iterrows()):
             row = iterrow[1]
-            if row["context"] != prev_context:
-                contexts.append(row["context"])
-                prev_context = row["context"]
-                prev_questions = row["questions"]
-                contexts.append(prev_context)
-                questions.append(prev_questions)
-            elif i != 0:
+            curr_context = clean_row(row["context"])
+            if curr_context != prev_context:
+                questions.append(row["questions"])
+                prev_context = curr_context
+            else:
                 questions[-1] = questions[-1] + row["questions"]
                 to_drop.append(i)
-        print(to_drop)
-        print(df_scenario)
-        df_scenario = df_scenario.drop(to_drop, axis = 0)
-        print(df_scenario)
-        print(len(questions))
+        df_scenario = df_scenario.drop(to_drop, axis=0)
         df_scenario["questions"] = questions
         
-        return df_scenario.loc[df_scenario['name'] != 'home', :].reset_index()  # WHY DID WE REMOVED 'home'?
+        return df_scenario.loc[df_scenario['name'] != 'home', :].reset_index(drop=True)
 
     def delete_intents_with_not_enough_utterances(self, nb_utterances):
         '''
@@ -147,6 +139,30 @@ class DataPrepModelAssess:
         self.df_scenario = self.df_scenario.reset_index()()
         return None
 
+def clean_row(row):
+    new_row = row
+    new_row = re.sub(r'<.+?>', ' cliquer sur le lien.', new_row)  # remove hyperlinks
+    new_row = re.sub(r'\*.+?\*', '', new_row)  # remove BP&CE
+    new_row = re.sub("_", " ", new_row)
+    new_row = re.sub("\*", "", new_row)
+    new_row = re.sub(" BP&CE ", " ", new_row)
+    new_row = re.sub(" BP ", " ", new_row)
+    new_row = re.sub(" CE ", " ", new_row)
+    new_row = re.sub("- ", ' - ', new_row)
+    new_row = re.sub(" -", ' - ', new_row)
+    new_row = re.sub(r'\s+', ' ', new_row)  # remove double spaces
+    new_row = new_row.strip()
+    new_row = re.sub(r"^- ", "", new_row)
+    new_row = re.sub("•", "-", new_row)
+    new_row = re.sub("►", "-", new_row)
+    index = new_row.find("Dernière mise à jour le")
+    if index != -1:
+        new_row = new_row[:index]
+    index = list(find_all(new_row, "Date de"))
+    if len(index) > 0:
+        new_row = new_row[:index[-1]]
+    return new_row
+
 def clean_dataframe(df_, channel):
     """
     This function is used to remove hyperlinks and
@@ -154,28 +170,9 @@ def clean_dataframe(df_, channel):
     """
     df_data = df_.copy(deep=True)
     nb_rows = df_data.shape[0]
-    for k in range(nb_rows):            
+    for k in range(nb_rows):
         row = copy.deepcopy(df_data.loc[k, channel])
-        row = re.sub(r'<.+?>', ' cliquer sur le lien.', row)  # remove hyperlinks
-        row = re.sub(r'\*.+?\*', '', row)  # remove BP&CE
-        row = re.sub("_", " ", row)
-        row = re.sub("\*", "", row)
-        row = re.sub(" BP&CE ", " ", row)
-        row = re.sub(" BP ", " ", row)
-        row = re.sub(" CE ", " ", row)
-        row = re.sub("- ", ' - ', row)
-        row = re.sub(" -", ' - ', row)
-        row = re.sub(r'\s+', ' ', row) # remove double spaces
-        row = row.strip()
-        row = re.sub(r"^- ", "", row)
-        row = re.sub("•", "-", row)
-        row = re.sub("►", "-", row)
-        index = row.find("Dernière mise à jour le")
-        if index != -1:
-            row = row[:index]
-        index = list(find_all(row, "Date de"))
-        if len(index) > 0:
-            row = row[:index[-1]]
+        row = clean_row(row)
 
         # Dealing with listings:
         indexes = list(find_all(row, ': - '))
@@ -675,8 +672,16 @@ def highlight_answers(answers, contexts, token, optional_string_to_add):
                                           " " + context[index_end:]
                         highlighted_contexts.append(optional_string_to_add + highlighted_context)
                     else:
-                        print(answer, context)
+                        tokenized_context = context.split(" ")
+                        substring_context = [" ".join(tokenized_context[i:i + len(tokenized)]) for i in range(len(tokenized_context)-len(tokenized)+1)]
+                        matches = difflib.get_close_matches(answer_bis, substring_context)
+                        if len(matches) > 0:
+                            index = context.find(matches[0])
+                            highlighted_context = context[:index] + " " + token + " " + matches[0] + " " + token + \
+                                                  " " + context[index + len(matches[0]):]
+                            highlighted_contexts.append(optional_string_to_add + highlighted_context)
+                        else:
+                            print(answer, context)
 
     return highlighted_contexts
-
 

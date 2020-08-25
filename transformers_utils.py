@@ -17,6 +17,7 @@ from tqdm.notebook import tqdm
 import json
 import time
 import random
+import regex as re
 random.seed(2020)
 
 import torch
@@ -764,3 +765,4 @@ def retrieval_score(generated_sequences, labels_sequences):
         index = np.where(argsort == i)[0][0]
         retrieval_score += index
     return 1 - retrieval_score/n**2, np.mean(np.diag(bleu_scores))
+

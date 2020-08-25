@@ -46,8 +46,9 @@ from natixis_utils import (
     DataPrepModelAssess,
     clean_dataframe, custom_tokenizer,
     select_keywords_spacy, 
-    separating_keywords, 
+    separating_keywords,
     highlight_answers,
+    find_all,
     )
 import argparse
 import json
@@ -112,7 +113,7 @@ if __name__ == "__main__":
             model_created = True
 
     if args.t5:
-        if args.checkpoint != None:
+        if args.checkpoint == None:
             model_name = "airKlizz/t5-base-multi-fr-wiki-news"
         if args.tokenizer != "":
             tokenizer = T5Tokenizer.from_pretrained(args.tokenizer)
@@ -143,8 +144,7 @@ if __name__ == "__main__":
         params = {'scenario_file': file_data}
         data_prep = DataPrepModelAssess(**params)
         df_generation = clean_dataframe(data_prep.df_scenario, "context")
-        df_generation = df_generation.drop(columns=["questions", 'title', 'index'])
-
+        df_generation = df_generation.drop(columns=["questions", 'title'])
         if args.preprocessing == "ke":
             # EXTRACTING KEYWORDS
             if args.t5_type == "multi":
@@ -155,10 +155,12 @@ if __name__ == "__main__":
 
         else:
             # EXTRACTING ANSWERS
-            print()
-            print("ATTENTION: The model should be trained on answer extraction task to preprocess the data.")            
             if args.t5_type == "multi":
+                print()                                                                                          
+                print("ATTENTION: The model should be trained on answer extraction task to preprocess the data.")
                 answers_span = []
+                answers_span_to_add = []
+                contexts = []
                 for i, iterrow in enumerate(df_generation.iterrows()):
                     row = iterrow[1]
                     context = row["context"]
@@ -178,12 +180,15 @@ if __name__ == "__main__":
                     inputs = tokenizer.batch_encode_plus(inputs_model, max_length= 512, truncation=True)
                     input_ids = torch.tensor(inputs["input_ids"]).to(device)
                     attention_mask = torch.tensor(inputs["attention_mask"]).to(device)
-                    outputs = model.generate(input_ids = input_ids, attention_mask = attention_mask)
+                    outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask)
                     spans = tokenizer.batch_decode(outputs)
                     for i in range(len(spans)):
                         spans[i] = spans[i].replace("<sep>", "")
-                    answers_span.append(spans)
-                df_generation["answer_span"] = answers_span 
+                    answers_span += spans
+                    answers_span_to_add.append(spans)
+                    contexts += [context]*len(spans)
+                    
+                df_generation["answer_span"] = answers_span_to_add
 
     if args.t5_type == "e2e":    
         prev_context = df_generation.loc[0, "context"]
@@ -195,13 +200,18 @@ if __name__ == "__main__":
                 prev_context = row["context"]
     print("Done. {:.2f}s".format(time.time() - t0))
     t0 = time.time()
+    print(df_generation.head())
 
     # GENERATION
-    print("Generating...", end="", flush=True)
+    print("Generating...")
     max_length_seq = args.max_length_input
     max_length_label = args.max_length_output
 
-    if args.t5_type == "multi": answers = df_generation["answer_span"]
+    if args.t5_type == "multi" and args.is_fquad == False:
+        if args.preprocessing == "ke":
+            answers = df_generation["answer_span"]
+        else:
+            answers = answers_span
     sentences = df_generation["context"]
 
     generation_hyperparameters = {
@@ -243,24 +253,44 @@ if __name__ == "__main__":
             for question in batch:
                 generated_questions.append(question)
 
-    else:  
-        nb_batch = len(sentences)//args.batch_size if args.t5_type == "multi" else len(contexts)//args.batch_size + 1
+    else:
+        if args.t5_type == "multi":
+            if args.is_fquad: nb_batch = len(sentences)//args.batch_size
+            else:
+                if args.preprocessing == "ae": nb_batch = len(contexts)//args.batch_size
+                else: nb_batch = len(sentences)//args.batch_size
+        else: nb_batch = len(contexts)//args.batch_size
+
         generated_questions = []
 
-        if args.t5_type == "multi": list_answers = answers.tolist()
+        if args.t5_type == "multi":
+            if args.is_fquad == False:
+                if type(answers) != type([0,1]):
+                    list_answers = answers.tolist()
+                else:
+                    list_answers = answers
+            else:
+                list_answers = df_generation["answer_span"].tolist()
+
         list_contexts = sentences.tolist()
         for i in tqdm.tqdm(range(nb_batch)):
             if args.t5_type == "multi":
-                batch_contexts = list_contexts[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
-                    list_contexts[i*args.batch_size:]
-                batch_answers = list_answers[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
-                    list_answers[i * args.batch_size:]
+                if args.preprocessing == "ae" and args.is_fquad == False:
+                    batch_contexts = contexts[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
+                        contexts[i*args.batch_size:]
+                    batch_answers = answers[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
+                        answers[i * args.batch_size:]
+                else:
+                    batch_contexts = list_contexts[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
+                        list_contexts[i*args.batch_size:]
+                    batch_answers = list_answers[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
+                        list_answers[i * args.batch_size:]
                 batch_hl_contexts = highlight_answers(batch_answers, batch_contexts, "<hl>", "generate question: ")
             else:
                 batch_contexts = contexts[i*args.batch_size:(i+1)*args.batch_size] if i != nb_batch - 1 else \
                     contexts[i*args.batch_size:]
                 batch_hl_contexts = add_string(batch_contexts, "generate questions: ")
-            if len(batch_hl_contexts) > 0 :
+            if len(batch_hl_contexts) > 0:
                 list_inputs = tokenizer.batch_encode_plus(batch_hl_contexts, padding=True, max_length=max_length_seq, truncation=True)
                 input_ids = torch.tensor(list_inputs["input_ids"], ).to(device)
                 attention_mask = torch.tensor(list_inputs["attention_mask"]).to(device)
@@ -273,7 +303,7 @@ if __name__ == "__main__":
                         generated = re.split("<[^<]*>", batch_generated_questions[j])[:-1]
                         batch_generated_questions[j] = generated
                 generated_questions += batch_generated_questions
-
+        
     if args.t5_type != "e2e" or args.is_fquad != True:
         df_generation["question"] = generated_questions
     print("Generated. {:.2f}s".format(time.time() - t0))
@@ -284,63 +314,73 @@ if __name__ == "__main__":
         for index in idx_examples_eval:  
             print(generated_questions[index])
 
+    else:
+        print("Few samples:")
+        for i in range(5):
+            print(generated_questions[i])
+
     # SAVING
     dict_to_save = {}
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
-    
-    if args.to_csv: df_generation.to_csv(os.path.join(args.output_dir, ".".join(args.file_name.split(".")[:-1] + ".csv")), sep="_", encoding="utf-8")
 
-    if args.is_fquad and args.t5_type == "multi":
-        data, paragraphs, qas = [], [], []
+    to_csv = False
+    if args.is_fquad:
+        if args.t5_type == "multi":
+            data, paragraphs, qas = [], [], []
 
-        dict_to_save['version'] = 1.1
-        prev_context = df_generation.loc[0, "context"]
-        prev_title = df_generation.loc[0, "doc_title"]
-        for i, iterrow in enumerate(df_generation.iterrows()):
-            row = iterrow[1]
-            
-            if row["context"] != prev_context:
-                paragraphs.append({
-                    "context":prev_context,
-                    "qas": qas
+            dict_to_save['version'] = 1.1
+            prev_context = df_generation.loc[0, "context"]
+            prev_title = df_generation.loc[0, "doc_title"]
+            for i, iterrow in enumerate(df_generation.iterrows()):
+                row = iterrow[1]
+
+                if row["context"] != prev_context:
+                    paragraphs.append({
+                        "context":prev_context,
+                        "qas": qas
+                        })
+                    qas = []
+                    prev_context = row["context"]
+                if row["doc_title"] != prev_title:
+                    theme = {
+                        "title": prev_title,
+                        "paragraphs": paragraphs,
+                        }
+                    data.append(theme)
+                    prev_title = row["doc_title"]
+                    paragraphs = []
+                qas.append({
+                    "answers": [{
+                        "answer_start": int(row["answer_span_start"]),
+                        "text": row["answer_span"]
+                        }],
+                    "question": row["question"],
+                    "id": str(row["id_question"]),
                     })
-                qas = []
-                prev_context = row["context"]
-            if row["doc_title"] != prev_title:
-                theme = {
-                    "title": prev_title,
-                    "paragraphs": paragraphs,
-                    }
-                data.append(theme)
-                prev_title = row["doc_title"]
-                paragraphs = []
-            qas.append({
-                "answers": [{
-                    "answer_start": int(row["answer_span_start"]),
-                    "text": row["answer_span"]
-                    }],
-                "question": row["question"],
-                "id": str(row["id_question"]),
+
+            paragraphs.append({
+                "context": prev_context,
+                "qas": qas
                 })
+            theme = {
+                "title": prev_title,
+                "paragraphs": paragraphs,
+                }
+            data.append(theme)
+
+            dict_to_save['data'] = data
+        else:
+            to_csv = True
+
+    if args.to_csv or to_csv:
+        if args.t5_type == "multi":
+            df_generation.to_csv(os.path.join(args.output_dir, args.file_name[:list(find_all(args.file_name, "."))[-1]] + ".csv"), sep="_", encoding="utf-8")
+        else:
+            df_ = pd.DataFrame({"context": contexts, "questions": generated_questions})
+            df_.to_csv(os.path.join(args.output_dir, args.file_name[:list(find_all(args.file_name, "."))[-1]] + ".csv"), sep="_", encoding="utf-8")
             
-        paragraphs.append({
-            "context":prev_context,
-            "qas": qas
-            })
-        theme = {
-            "title": prev_title,
-            "paragraphs": paragraphs,
-            }   
-        data.append(theme)
-        
-        dict_to_save['data'] = data
-
-    elif args.t5_type == "e2e" and args.is_fquad:
-        df_e2e = pd.DataFrame({"context": contexts, "questions": generated_questions})
-        df_e2e.to_csv(os.path.join(args.output_dir, ".".join(args.file_name.split(".")[:-1] + ".csv")), sep="_", encoding="utf-8")
-
-    elif args.is_fquad == False:
+    if args.is_fquad == False:
         # NATIXIS TO JSON (questions, context, name, id, tags, confidentiality)
         if args.t5_type == "multi":
             contexts_new, questions_new, temp_questions = [], [], []
@@ -356,11 +396,13 @@ if __name__ == "__main__":
             questions_new.append(temp_questions)
             contexts_new.append(row["context"])
             df_generation = pd.DataFrame({"context": contexts_new, "questions": questions_new})
+        else:
+            df_generation = pd.DataFrame({"context": contexts, "questions": generated_questions})
                 
         intents = []
         file_ref = open(args.ref_file, 'r')
         dict_ref = json.load(file_ref)
-        dict_ = {'nlp': dict_ref['nlp'], "datasources":[], "entities":dict_ref["entities"], "modules": []}
+        dict_ = {'nlp': dict_ref['nlp'], "datasources": [], "entities": dict_ref["entities"], "modules": []}
         for i, iterrow in enumerate(df_generation.iterrows()):
             try:
                 corresponding_intent = dict_ref["intents"][i]
