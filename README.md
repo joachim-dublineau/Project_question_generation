@@ -7,11 +7,12 @@
   <img width="30%", src="https://www.actuia.com/wp-content/uploads/2018/12/zelros-696x348.png">
 </p>
 
-
-### Train a model
 This repository contains a script able to train an EncoderDecoderModel, a BART model of a T5 model from Hugging Face's transformers library (https://github.com/huggingface/transformers). They can be trained with different methods: on question generation task only, on multi tasks (QG, QA and answer extraction) or on end-to-end question generation (one context --> * questions). Scripts for evaluation as well as for generation are also available.
 
-It works with T5, BART, BERT and CamemBERT and it uses SQuAD (https://rajpurkar.github.io/SQuAD-explorer/dataset/) and FQuAD (https://storage.googleapis.com/illuin/fquad/train.json.zip
+
+### Train a model on QG task only
+The main.py file trains a model on Question Generation task only.
+It works with BART, BERT and CamemBERT only and it uses SQuAD (https://rajpurkar.github.io/SQuAD-explorer/dataset/) and FQuAD (https://storage.googleapis.com/illuin/fquad/train.json.zip dataset type for training.
  https://storage.googleapis.com/illuin/fquad/valid.json.zip) to train these previous models.
  
 In order to make the evaluate function works, please make sure to install this library: https://github.com/Maluuba/nlg-eval .
@@ -51,6 +52,9 @@ optional arguments:
 -  -nb, --num_beams NUM_BEAMS: number of beams, parameter for generation, default 1
 -  -tp, --temperature TEMPERATURE: temperature parameter for softmax in generation, default 1.0
 -  -eo, --evaluate_on EVALUATE_ON: number of examples on which to evaluate the model, default 100
+
+### Train on multi task or e2e
+In order to train a transformers model on multi task or on end-to-end task, we use a script adapated from Patil-Suraj repository (see credits): run_qg_multi or run_qg_e2e.
 
 ### Eval
 This script is taken from patil-suraj repository (see credits).
