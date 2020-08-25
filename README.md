@@ -54,7 +54,28 @@ optional arguments:
 -  -eo, --evaluate_on EVALUATE_ON: number of examples on which to evaluate the model, default 100
 
 ### Train on multi task or e2e
-In order to train a transformers model on multi task or on end-to-end task, we use a script adapated from Patil-Suraj repository (see credits): run_qg_multi or run_qg_e2e.
+In order to train a transformers model on multi task or on end-to-end task, we use a script adapated from Patil-Suraj repository (see credits): run_qg_multi or run_qg_e2e. The training informations are given in this wandb folder: https://app.wandb.ai/joachim_dublineau/question_generation_french . An Wandb account is necessary to make this file work without any change.
+
+
+For e2e:
+
+```bash
+# data preprocessing
+python data/fquad_multitask/fquad_multitask.py
+
+python prepare_data.py --task e2e_qg --valid_for_qg_only --model_type t5 --dataset_path data/fquad_multitask \
+--qg_format highlight_qg_format --max_source_length 512 --max_target_length 32 --train_file_name train_data_e2e_qg_t5.pt \
+--valid_file_name valid_data_e2e_qg_t5.pt
+
+# training
+python run_qg_e2e.py --model_name_or_path airKlizz/t5-base-multi-fr-wiki-news --model_type t5 \
+--tokenizer_name_or_path t5_qg_tokenizer --output_dir ../t5-fr-e2e-hl/run0 --train_file_path data/mix_train_data_e2e_t5.pt \
+--valid_file_path data/fquad_valid_data_e2e_t5.pt --per_device_train_batch_size 3 --per_device_eval_batch_size 3 \
+--gradient_accumulation_steps 64 --learning_rate 1e-4 --num_train_epochs 20 --seed 42 --do_train --do_eval \
+--evaluate_during_training --logging_steps 20 --eval_steps 50 
+```
+
+
 
 ### Eval
 This script is taken from patil-suraj repository (see credits).
