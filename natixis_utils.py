@@ -545,7 +545,7 @@ def select_keywords_spacy(df_data, channel, n_keywords, nlp):
     OUTPUTS:
     - df_data_bis: copy of df_data but without the commas in sentences channel.
     '''
-    df_data_bis = df_data.deepcopy()
+    df_data_bis = copy.deepcopy(df_data)
     answers_spans = []
     for i, row in enumerate(df_data_bis.iterrows()):
         "Rechecker l'efficacité de ces fonctions de preprocessing."
@@ -652,7 +652,7 @@ def highlight_answers(answers, contexts, token, optional_string_to_add):
             context_bis = re.sub("  ", " ", context_bis)
             index = context_bis.find(answer_bis)
             if index != -1:
-                highlighted_context = context[:index] + " " + token + " " + answer_bis + " " + token + " " + context[
+                highlighted_context = context[:index] + " " + token + " " + context[index:index+len(answer)] + " " + token + " " + context[
                                                                                                          index + len(
                                                                                                              answer):]
                 highlighted_contexts.append(optional_string_to_add + highlighted_context)
