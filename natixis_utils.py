@@ -681,7 +681,10 @@ def highlight_answers(answers, contexts, token, optional_string_to_add):
                                                   " " + context[index + len(matches[0]):]
                             highlighted_contexts.append(optional_string_to_add + highlighted_context)
                         else:
-                            print(answer, context)
+                            print("Unable to find a matching for answer in context. answer:", answer)
+                            print("context:", context)
+                            highlighted_context = token + ' ' + context + ' ' + token 
+                            highlighted_contexts.append(optional_string_to_add + highlighted_context)
 
     return highlighted_contexts
 
