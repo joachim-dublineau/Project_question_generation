@@ -1,6 +1,6 @@
 # coding: utf-8
 
-######## Script: Training of an EncoderDecoderModel with transformers_utils.py ########
+######## Script: Training of an EncoderDecoderModel or Bart Model with transformers_utils.py ########
 
 # This python file contains a script that shows how to train an EncoderDecoderModel or a BART model.
 # Attention: this script is supposed to work only for BERT, BART and CamemBERT, other models were not tested.

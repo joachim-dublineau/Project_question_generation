@@ -146,7 +146,7 @@ if __name__ == "__main__":
         data_prep = DataPrepModelAssess(**params)
         df_generation = clean_dataframe(data_prep.df_scenario, "context")
         df_generation = df_generation.drop(columns=["questions", 'title'])
-        if args.t5_type == "multi" and args.preprocessing == "ke":
+        if (args.t5_type == "multi" and args.preprocessing == "ke") or args.bart:
             # EXTRACTING KEYWORDS
             nlp = spacy.load("fr_core_news_sm")
             nlp.tokenizer = custom_tokenizer(nlp)
@@ -228,6 +228,11 @@ if __name__ == "__main__":
         return context_bis
 
     if not args.t5:
+        if args.is_fquad:
+            answers = df_generation["answer_span"]
+        else:
+            list_contexts = contexts
+            
         generation_dataset = load_examples_question_generation(
             answers=answers,
             sentences=list_contexts,
@@ -288,12 +293,6 @@ if __name__ == "__main__":
                 generation_hyperparameters["attention_mask"] = attention_mask
                 batch_generated_tokens = model.generate(**generation_hyperparameters)
                 batch_generated_questions = tokenizer.batch_decode(batch_generated_tokens)
-                if len(batch_generated_questions) != len(batch_contexts):
-                    print(batch_generated_questions)
-                    print(batch_contexts)
-                    print(batch_answers)
-                    print(batch_hl_contexts)
-                    print(input_ids)
                 if args.t5_type == "e2e":
                     for j in range(len(batch_generated_questions)):
                         generated = re.split("<[^<]*>", batch_generated_questions[j])[:-1]
@@ -401,19 +400,6 @@ if __name__ == "__main__":
     if args.is_fquad == False:
         # NATIXIS TO JSON (questions, context, name, id, tags, confidentiality)
         if args.t5_type == "multi":
-            #contexts_new, questions_new, temp_questions = [], [], []
-            #prev_context = df_generation.iloc[0]["context"]
-            #for iterrow in df_generation.iterrows():
-            #    row = iterrow[1]
-            #    if row["context"] != prev_context:
-            #        questions_new.append(temp_questions)
-            #        contexts_new.append(prev_context)
-            #        prev_context = row["context"]
-            #        temp_questions = []
-            #    temp_questions.append(row["question"])
-            #questions_new.append(temp_questions)
-            #contexts_new.append(row["context"])
-            #df_generation = pd.DataFrame({"context": contexts_new, "questions": questions_new})
             df_generation = pd.DataFrame({"context": list_contexts, "questions": questions_tab_for_multi})
         else:
             df_generation = pd.DataFrame({"context": contexts, "questions": generated_questions})
