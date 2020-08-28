@@ -23,7 +23,6 @@ import torch
 import tqdm
 
 from transformers import (
-    BertConfig,
     BertTokenizer,
     CamembertTokenizer,
     EncoderDecoderConfig,
@@ -65,7 +64,7 @@ parser.add_argument("file_name", help="name of the output json file that will be
 # Optional arguments
 parser.add_argument("-fq", "--is_fquad", help="boolean saying if the file is an fquad json file or not, default False", type=bool, default=False, action="store")
 parser.add_argument("-bt", "--bart", help="true if bart else false, default False", type=bool, default=False, action="store")
-parser.add_argument("-t5", "--t5", help='true if t5 else false, default False', type=bool, default=True, action="store")
+parser.add_argument("-t5", "--t5", help='true if t5 else false, default False', type=bool, default=False, action="store")
 parser.add_argument("-t5tp", "--t5_type", help="type of T5 model: multi or e2e, default multi", choices={"multi", "e2e"}, default="multi", action="store")
 parser.add_argument("-pr", "--preprocessing", help="ae (answer extraction if model allows) or ke (keyword extraction with spacy), default ae", type=str, default="ae", choices={"ae", "ke"})
 parser.add_argument("-rf", "--ref_file", help='file to use for non fquad type of dataset as a reference. .json', type=str, action="store")
@@ -79,6 +78,8 @@ parser.add_argument("-lp", "--length_penalty", help='length penalty parameter fo
 parser.add_argument("-nb", "--num_beams", help="number of beams, parameter for generation, default 1", type=int, default=1, action="store")
 parser.add_argument("-tp", "--temperature", help="temperature parameter for softmax in generation, default 1.0", type=float, default=1.0, action="store")
 parser.add_argument("-csv", "--to_csv", help= "if the generated sentences need to be saved as csv (sep=_, encoding utf-8), default False", type=bool, default=False, action="store")
+parser.add_argument("-lg", "--language", help="en or fr, default fr", choices={"en", "fr"}, default="fr", action="store")
+parser.add_argument("-mn", "--model_name", help="name of the model if no checkpoint, default None", type=str, default="", action='store')
 
 args = parser.parse_args()
 
@@ -106,25 +107,28 @@ if __name__ == "__main__":
         model_name = args.checkpoint
 
     if args.bart:
-        model_name = "WikinewsSum/bart-large-multi-fr-wiki-news"
+        if args.checkpoint == None:
+            model_name = "WikinewsSum/bart-large-multi-fr-wiki-news" if args.model_name == "" else args.model_name
         # config = BartConfig.from_pretrained(model_name)
-        tokenizer = BartTokenizer.from_pretrained(model_name, do_lower_case=True)
+        tokenizer = BartTokenizer.from_pretrained(args.tokenizer, do_lower_case=True)
         if not model_created:
             model = BartForConditionalGeneration.from_pretrained(model_name)
             model_created = True
 
     if args.t5:
         if args.checkpoint == None:
-            model_name = "airKlizz/t5-base-multi-fr-wiki-news"
-        if args.tokenizer != "":
-            tokenizer = T5Tokenizer.from_pretrained(args.tokenizer)
-        else:
-            print()
-            print("Please provide a correct tokenizer for T5.")
+            model_name = "airKlizz/t5-base-multi-fr-wiki-news" if args.model_name == "" else args.model_name
+
+        tokenizer = T5Tokenizer.from_pretrained(args.tokenizer)
+        if not model_created:
+            model = T5ForConditionalGeneration.from_pretrained(model_name)
+            model_created = True
 
     elif not args.bart and not args.t5:
-        model_name = "camembert-base"
-        tokenizer = CamembertTokenizer.from_pretrained(model_name)
+        if not model_created:
+            model_name = ("camembert-base" if args.language == "fr" else "bert-base-cased") if args.model_name == "" else args.model_name
+        tokenizer = CamembertTokenizer.from_pretrained("camembert-base") if args.language == "fr" else BertTokenizer.from_pretrained("bert-base-cased")
+        tokenizer.bos_token = "<s>"
         if not model_created:
             model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_name, model_name)
     print("Done.")
@@ -220,6 +224,8 @@ if __name__ == "__main__":
         'num_beams': args.num_beams,
         'temperature': args.temperature,
     }
+    if args.bart == False and args.t5 == False:
+        generation_hyperparameters["decoder_start_token_id"] = tokenizer.bos_token_id
 
     def add_string(contexts, string):
         context_bis = []
@@ -320,9 +326,12 @@ if __name__ == "__main__":
                 generated_questions += batch_generated_questions
         
     if args.t5_type != "e2e" or args.is_fquad != True:
-        if args.t5_type == "multi" and args.is_fquad == False:
+        if args.t5 and args.t5_type == "multi" and args.is_fquad == False:
             df_generation["question"] = questions_tab_for_multi
-        else: df_generation["question"] = generated_questions
+        else:
+            print(df_generation.shape)
+            print(len(generated_questions))
+            df_generation["question"] = generated_questions
     print("Generated. {:.2f}s".format(time.time() - t0))
 
     if args.is_fquad: 
@@ -399,7 +408,7 @@ if __name__ == "__main__":
             
     if args.is_fquad == False:
         # NATIXIS TO JSON (questions, context, name, id, tags, confidentiality)
-        if args.t5_type == "multi":
+        if args.t5 and args.t5_type == "multi":
             df_generation = pd.DataFrame({"context": list_contexts, "questions": questions_tab_for_multi})
         else:
             df_generation = pd.DataFrame({"context": contexts, "questions": generated_questions})

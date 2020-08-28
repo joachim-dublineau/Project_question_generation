@@ -15,3 +15,6 @@ test_natixis.ipynb
 *.csv
 *.xlsx
 temp.py
+*.pt
+*.json
+*.model

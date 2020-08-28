@@ -168,6 +168,12 @@ def main():
     df_valid = pd.read_csv(os.path.join(data_args.dataset_path, data_args.valid_file_name))
 
     df_train = df_train.drop(columns=["Unnamed: 0"])
+    for i, iterrow in df_train.iterrows():
+        row = iterrow[0]
+        if i == 0:  print(row)
+        if row[:35] == "question: What is meant by the area":
+            top = i
+    df_train = df_train.drop([top]).reset_index(drop=True)
     df_valid = df_valid.drop(columns=["Unnamed: 0"])
 
     train_dataset = nlp.Dataset.from_pandas(df_train)
@@ -192,6 +198,7 @@ def main():
     print("Train dataset:")
     df = train_dataset.data.to_pandas()
     print(df.head())
+    print(df.iloc[200772])
     print("Valid dataset:")
     df = valid_dataset.data.to_pandas()
     print(df.head())
