@@ -222,8 +222,10 @@ if __name__ == "__main__":
         'num_beams': args.num_beams,
         'temperature': args.temperature,
     }
-    if args.bart == False and args.t5 == False:
+    if not args.bart and not args.t5:
         generation_hyperparameters["decoder_start_token_id"] = tokenizer.bos_token_id
+    if not args.t5:
+        generation_hyperparameters["eos_token_id"] = tokenizer.convert_tokens_to_ids("?")
 
     def add_string(contexts, string):
         context_bis = []
