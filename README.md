@@ -126,6 +126,9 @@ optional arguments:
 - -nb --num_beams NUM_BEAMS number of beams, parameter for generation, default 1
 - -tp --temperature TEMPERATURE temperature parameter for softmax in generation, default 1.0
 - -csv --to_csv TO_CSV if the generated sentences need to be saved as csv (sep=_, encoding utf-8), default False
+- -lg --language {en,fr} en or fr, default fr
+- -mn --model_name MODEL_NAME name of the model if no checkpoint, default None
+
                         
 ### Credits:
 Big thanks and credits to https://github.com/patil-suraj/question_generation for the multi task training code.
