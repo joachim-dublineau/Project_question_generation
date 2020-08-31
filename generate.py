@@ -68,7 +68,7 @@ parser.add_argument("-t5", "--t5", help='true if t5 else false, default False', 
 parser.add_argument("-t5tp", "--t5_type", help="type of T5 model: multi or e2e, default multi", choices={"multi", "e2e"}, default="multi", action="store")
 parser.add_argument("-pr", "--preprocessing", help="ae (answer extraction if model allows) or ke (keyword extraction with spacy), default ae", type=str, default="ae", choices={"ae", "ke"})
 parser.add_argument("-rf", "--ref_file", help='file to use for non fquad type of dataset as a reference. .json', type=str, action="store")
-parser.add_argument("-tk", "--tokenizer", help="name or path of where to find the tokenizer", type=str, default="", action="store")
+parser.add_argument("-tk", "--tokenizer", help="name or path of where to find the tokenizer", type=str, default=None, action="store")
 parser.add_argument("-mi", "--max_length_input", help="max length of input sequence, default 256", type=int, default=512, action="store")
 parser.add_argument("-mo", "--max_length_output", help="max_length of output sequence, defaut 21", type=int, default=21, action="store")
 parser.add_argument("-ck", "--checkpoint", help="directory where to find the checkpoint of the model, default None", type=str, default=None, action='store')
@@ -109,8 +109,7 @@ if __name__ == "__main__":
     if args.bart:
         if args.checkpoint == None:
             model_name = "WikinewsSum/bart-large-multi-fr-wiki-news" if args.model_name == "" else args.model_name
-        # config = BartConfig.from_pretrained(model_name)
-        tokenizer = BartTokenizer.from_pretrained(args.tokenizer, do_lower_case=True)
+        tokenizer = BartTokenizer.from_pretrained(args.tokenizer) if args.tokenizer != None else BartTokenizer.from_pretrained(model_name)
         if not model_created:
             model = BartForConditionalGeneration.from_pretrained(model_name)
             model_created = True
@@ -118,8 +117,7 @@ if __name__ == "__main__":
     if args.t5:
         if args.checkpoint == None:
             model_name = "airKlizz/t5-base-multi-fr-wiki-news" if args.model_name == "" else args.model_name
-
-        tokenizer = T5Tokenizer.from_pretrained(args.tokenizer)
+        tokenizer = T5Tokenizer.from_pretrained(args.tokenizer) if args.tokenizer != None else T5Tokenizer.from_pretrained(model_name)
         if not model_created:
             model = T5ForConditionalGeneration.from_pretrained(model_name)
             model_created = True

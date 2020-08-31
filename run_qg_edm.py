@@ -97,14 +97,14 @@ if __name__ == "__main__":
         if args.bart:
             model_name = "WikinewsSum/bart-large-multi-fr-wiki-news"
             #config = BartConfig.from_pretrained(model_name)
-            tokenizer = BartTokenizer.from_pretrained(model_name, do_lower_case=True)
+            tokenizer = BartTokenizer.from_pretrained(model_name)
             if not model_created:
                 model = BartForConditionalGeneration.from_pretrained(model_name)
                 model_created = True
         else:
             model_name = "camembert-base"
             #config = CamembertConfig.from_pretrained(model_name)
-            tokenizer = CamembertTokenizer.from_pretrained(model_name, do_lower_case=True)
+            tokenizer = CamembertTokenizer.from_pretrained(model_name)
         print("Model used:", model_name)
 
         # FQuAD
@@ -132,14 +132,14 @@ if __name__ == "__main__":
         if args.bart:
             model_name = 'facebook/bart-large'
             # config = BartConfig.from_pretrained(model_name)
-            tokenizer = BartTokenizer.from_pretrained(model_name, do_lower_case=True)
+            tokenizer = BartTokenizer.from_pretrained(model_name)
             if not model_created:
                 model = BartForConditionalGeneration.from_pretrained(model_name)
                 model_created = True
         else:
             model_name = 'bert-base-uncased'
             #config = BertConfig.from_pretrained(model_name)
-            tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=True)
+            tokenizer = BertTokenizer.from_pretrained(model_name)
         print('Model used:', model_name)
 
         # SQuAD
