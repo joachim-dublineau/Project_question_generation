@@ -428,21 +428,21 @@ if __name__ == "__main__":
                     corresponding_intent['details']['confidentiality']
 
                 answers = [{
-                    'tips':[],
-                    'texts':[context],
+                    'tips': [],
+                    'texts': [context],
                     'next_actions':[],
                     }]
                 details_dict = {
-                    'answers':answers, 
+                    'answers': answers,
                     'tags': corresponding_intent['details']['tags'], 
                     'confidentiality': confidentiality, 
                     'sentences': questions,
                     }
                 row_dict = {
                     "bot_id": '',
-                    'id':corresponding_intent['id'],
-                    'name':corresponding_intent['name'],
-                    'title':'',
+                    'id': corresponding_intent['id'],
+                    'name': corresponding_intent['name'],
+                    'title': '',
                     "created_at": "2017-07-17T10:15:13.657Z",
                     'details': details_dict,
                     }
