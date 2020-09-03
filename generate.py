@@ -125,7 +125,7 @@ if __name__ == "__main__":
     elif not args.bart and not args.t5:
         if not model_created:
             model_name = ("camembert-base" if args.language == "fr" else "bert-base-cased") if args.model_name == "" else args.model_name
-        tokenizer = CamembertTokenizer.from_pretrained("camembert-base") if args.language == "fr" else BertTokenizer.from_pretrained("bert-base-cased")
+        tokenizer = CamembertTokenizer.from_pretrained("camembert-base", lower_case=True) if args.language == "fr" else BertTokenizer.from_pretrained("bert-base-cased", lower_case=True)
         tokenizer.bos_token = "<s>"
         if not model_created:
             model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_name, model_name)

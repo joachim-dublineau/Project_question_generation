@@ -167,14 +167,14 @@ def main():
     df_train = pd.read_csv(os.path.join(data_args.dataset_path, data_args.train_file_name))
     df_valid = pd.read_csv(os.path.join(data_args.dataset_path, data_args.valid_file_name))
 
-    df_train = df_train.drop(columns=["Unnamed: 0"])
-    for i, iterrow in df_train.iterrows():
-        row = iterrow[0]
-        if i == 0:  print(row)
-        if row[:35] == "question: What is meant by the area":
-            top = i
-    df_train = df_train.drop([top]).reset_index(drop=True)
-    df_valid = df_valid.drop(columns=["Unnamed: 0"])
+    # df_train = df_train.drop(columns=["Unnamed: 0"])
+    # for i, iterrow in df_train.iterrows():
+    #     row = iterrow[0]
+    #     if i == 0:  print(row)
+    #     if row[:35] == "question: What is meant by the area":
+    #         top = i
+    # df_train = df_train.drop([top]).reset_index(drop=True)
+    # df_valid = df_valid.drop(columns=["Unnamed: 0"])
 
     train_dataset = nlp.Dataset.from_pandas(df_train)
     valid_dataset = nlp.Dataset.from_pandas(df_valid)
@@ -195,13 +195,13 @@ def main():
         logger.info(f"processing valid data only for {data_args.task} task")
         valid_dataset = valid_dataset.filter(TASK_TO_FILTER_FN[data_args.task])
 
-    print("Train dataset:")
-    df = train_dataset.data.to_pandas()
-    print(df.head())
-    print(df.iloc[200772])
-    print("Valid dataset:")
-    df = valid_dataset.data.to_pandas()
-    print(df.head())
+    # print("Train dataset:")
+    # df = train_dataset.data.to_pandas()
+    # print(df.head())
+    # print(df.iloc[200772])
+    # print("Valid dataset:")
+    # df = valid_dataset.data.to_pandas()
+    # print(df.head())
 
     train_dataset = processor.process(train_dataset)
     valid_dataset = processor.process(valid_dataset)
@@ -210,8 +210,8 @@ def main():
     train_dataset.set_format(type='torch', columns=columns)
     valid_dataset.set_format(type='torch', columns=columns)
 
-    train_path = os.path.join("data", data_args.output_train_file_name)
-    valid_path = os.path.join("data", data_args.output_valid_file_name)
+    train_path = os.path.join("Project_question_generation", "data", data_args.output_train_file_name)
+    valid_path = os.path.join("Project_question_generation", "data", data_args.output_valid_file_name)
     
     torch.save(train_dataset, train_path)
     logger.info(f"saved train dataset at {train_path}")
