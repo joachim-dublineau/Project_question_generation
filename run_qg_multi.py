@@ -32,7 +32,7 @@ MODEL_TYPE_TO_TOKENIZER = {
 
 logger = logging.getLogger(__name__)
 wandb.login()
-wandb.init(project="question_generation_french", name = "t5-from_en-multi-fquad_piaf")
+wandb.init(project="question_generation_french", name = "bart-mnli-multi-fquad_piaf")
 
 
 
