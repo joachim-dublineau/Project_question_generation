@@ -140,7 +140,7 @@ def _generate_examples(filepath, qg_format):
     count = 0
     tasks = ['qa', 'qg', 'ans_ext', 'e2e_qg']
 
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         squad = json.load(f)
         for article in squad["data"]:
             title = article.get("title", "").strip()
