@@ -29,6 +29,7 @@ from transformers import (AdamW,
                           get_linear_schedule_with_warmup,
                           get_cosine_with_hard_restarts_schedule_with_warmup)
 from nltk.translate.bleu_score import sentence_bleu
+from tqdm import tqdm
 
 
 # UTILS FOR PROCESSING
@@ -631,10 +632,9 @@ def generate_questions(
     """
     sampler = SequentialSampler(dataset)
     dataloader = DataLoader(dataset, sampler=sampler, batch_size=batch_size)
-    iterator = dataloader
     results_generation = []
     is_labeled = -1
-    for batch in iterator:
+    for i, batch in tqdm(enumerate(dataloader)):
         results = []
         model.eval()
         batch = tuple(t.to(device) for t in batch)

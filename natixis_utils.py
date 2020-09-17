@@ -534,7 +534,7 @@ def neighborhood_analysis(list_words, words_best, ord_dict):
 
 def select_keywords_spacy(df_data, channel, n_keywords, nlp):
     '''
-    This function update the chanel of the dataframe df_data
+    This function do a keywords selection on the content of df_data[channel]
     by selecting the n_keywords words having the highest score
     using TextRank.
     INPUTS:
@@ -652,9 +652,12 @@ def highlight_answers(answers, contexts, token, optional_string_to_add):
             context_bis = re.sub("  ", " ", context_bis)
             index = context_bis.find(answer_bis)
             if index != -1:
-                highlighted_context = context[:index] + " " + token + " " + context[index:index+len(answer)] + " " + token + " " + context[
-                                                                                                         index + len(
-                                                                                                             answer):]
+                next_word_index = context[index + len(answer):].find(' ') + index + len(answer)
+                if index + len(answer) < len(context):
+                    highlighted_context = context[:index] + " " + token + " " + context[index:next_word_index] + " " + token + " " + context[
+                                                                                                            next_word_index + 1:]
+                else: 
+                    highlighted_context = context[:index] + ' ' + token + " " +  context[index:] + ' ' + token
                 highlighted_contexts.append(optional_string_to_add + highlighted_context)
             else:
                 tokenized = answer_bis.split(' ')
